@@ -44,9 +44,11 @@ class Config:
             suffix = '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
         for k, v in d.items():
             if k in ['tasks', 'tasks_eval']:
-                setattr(self, k, [SimpleNamespace(**v_) for v_ in v])
-            elif k in ['optimizer', 'lr_scheduler', 'batch_sampler']:
-                setattr(self, k, SimpleNamespace(**v))
+                for task in v:
+                    for kk, vv in task.items():
+                        if kk in ['optimizer', 'lr_scheduler', 'batch_sampler']:
+                            task[kk] = SimpleNamespace(**vv)
+                setattr(self, k, [SimpleNamespace(**task) for task in v])
             else:
                 setattr(self, k, v)
         self.log_dir = f'outputs/{self.out_dir_name}_{self.mode}{suffix}/'

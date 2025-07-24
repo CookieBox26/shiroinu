@@ -29,23 +29,39 @@ pred_len = [24, 7]
 kernel_size = 25
 bias = true
 
-[optimizer]
-path = "torch.optim.Adam"
-params = {"lr" = 0.001}
-
-[lr_scheduler]
-path = "torch.optim.lr_scheduler.CosineAnnealingLR"
-params = {"T_max" = 10}
-
-[batch_sampler]
-path = "shiroinu.batch_sampler.BatchSamplerShuffle"
-params = {"batch_size" = 64}
-
 [[tasks]]
+reset_model = false
 n_epoch = 40
 early_stop = true
 train_range = [0.0, 0.1]
 valid_range = [0.1, 0.2]
+[tasks.batch_sampler]
+path = "shiroinu.batch_sampler.BatchSamplerShuffle"
+params = {"batch_size" = 64}
+[tasks.optimizer]
+path = "torch.optim.Adam"
+params = {"lr" = 0.001}
+[tasks.lr_scheduler]
+path = "torch.optim.lr_scheduler.CosineAnnealingLR"
+params = {"T_max" = 10}
+# path = "torch.optim.lr_scheduler.CosineAnnealingWarmRestarts"
+# params = {"T_0" = 10}
+
+[[tasks]]
+reset_model = true
+n_epoch = 40
+early_stop = true
+train_range = [0.0, 0.1]
+valid_range = [0.1, 0.2]
+[tasks.batch_sampler]
+path = "shiroinu.batch_sampler.BatchSamplerShuffle"
+params = {"batch_size" = 32}
+[tasks.optimizer]
+path = "torch.optim.Adam"
+params = {"lr" = 0.001}
+[tasks.lr_scheduler]
+path = "torch.optim.lr_scheduler.CosineAnnealingLR"
+params = {"T_max" = 10}
 
 # -------------------- for eval --------------------
 
@@ -67,8 +83,8 @@ seq_len = [24, 7, 4]
 pred_len = [24, 7]
 kernel_size = 25
 bias = true
-state_path = "../shiroinu_/model_state_best.pth"
+state_path = "outputs/debug_train/model_task_0_best.pth"
 
 [[tasks_eval]]
-train_range = [0.0, 0.75]  # for scaling
-valid_range = [0.75, 1.0]
+train_range = [0.1, 0.2]  # for scaling
+valid_range = [0.2, 0.3]
