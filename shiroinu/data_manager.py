@@ -13,6 +13,10 @@ class TSDataset(Dataset):
     ])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    @classmethod
+    def to_tensor(cls, x):
+        return torch.tensor(x, dtype=torch.float32, device=cls.device)
+
     def __init__(self, logger, df, seq_len, horizon):
         self.df = df
         self.tsta = list(self.df['timestamp'].values)
@@ -80,13 +84,13 @@ class TSDataset(Dataset):
     @staticmethod
     def collate_fn(batch):
         tsta = np.array([v[0] for v in batch])  # batch_size, seq_len
-        tste = torch.tensor(np.array([v[1] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, seq_len
-        data = torch.tensor(np.array([v[2] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, seq_len, num_of_roads
-        datass = torch.tensor(np.array([v[3] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, seq_len, num_of_roads
+        tste = TSDataset.to_tensor(np.array([v[1] for v in batch]))  # batch_size, seq_len
+        data = TSDataset.to_tensor(np.array([v[2] for v in batch]))  # batch_size, seq_len, num_of_roads
+        datass = TSDataset.to_tensor(np.array([v[3] for v in batch]))  # batch_size, seq_len, num_of_roads
         tsta_future = np.array([v[4] for v in batch])  # batch_size, pred_len
-        tste_future = torch.tensor(np.array([v[5] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, pred_len
-        data_future = torch.tensor(np.array([v[6] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, pred_len, num_of_roads
-        datass_future = torch.tensor(np.array([v[7] for v in batch]), dtype=torch.float32, device=TSDataset.device)  # batch_size, pred_len, num_of_roads
+        tste_future = TSDataset.to_tensor(np.array([v[5] for v in batch]))  # batch_size, pred_len
+        data_future = TSDataset.to_tensor(np.array([v[6] for v in batch]))  # batch_size, pred_len, num_of_roads
+        datass_future = TSDataset.to_tensor(np.array([v[7] for v in batch]))  # batch_size, pred_len, num_of_roads
         return TSDataset.TSBatch(tsta, tste, data, datass, tsta_future, tste_future, data_future, datass_future)
 
     @staticmethod

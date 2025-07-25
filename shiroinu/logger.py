@@ -11,6 +11,7 @@ class Logger:
         os.makedirs(self.log_dir, exist_ok=True)
         self.i_task = -1
         self.print_epoch = False
+        self.d_epoch_id_best = {}
 
     def log(self, *args):
         self.log_file.write(' '.join([str(v) for v in args]) + '\n')
@@ -50,5 +51,6 @@ class Logger:
             with open(info_path, mode='w', encoding='utf8', newline='\n') as ofile:
                 toml.dump(self.info, ofile)
             epoch_id_best = self.info['epoch_id_best']
+            self.d_epoch_id_best[self.i_task] = epoch_id_best
             print(f'{epoch_id_best=}')
             print(self.info['epochs'][epoch_id_best]['loss_0_per_sample_valid'])

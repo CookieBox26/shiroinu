@@ -41,7 +41,7 @@ class DLinear(nn.Module):
         self.decompsition = series_decomp(kernel_size)
         self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len, bias=bias)
-        if state_path is not None:
+        if (state_path is not None) and (state_path != ''):
             self.load_state_dict(torch.load(state_path))
             self.eval()
         self.to(DLinear.device)
@@ -69,8 +69,8 @@ class DLinear(nn.Module):
         return x, {'seasonal': seasonal_output, 'trend': trend_output}
 
     def rescale(self, dataset, x):
-        means = torch.tensor(dataset.means_for_scale, dtype=torch.float32, device=dataset.device)
-        stds = torch.tensor(dataset.stds_for_scale, dtype=torch.float32, device=dataset.device)
+        means = dataset.to_tensor(dataset.means_for_scale)
+        stds = dataset.to_tensor(dataset.stds_for_scale)
         return means + torch.einsum('k,ijk->ijk', (stds, x))
 
 
@@ -121,7 +121,7 @@ class DLinearSparse(DLinear):
         self.not_frozen = [i for i in range(0, seq_len, pred_len)]
         self.Linear_Seasonal = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
-        if state_path is not None:
+        if (state_path is not None) and (state_path != ''):
             self.load_state_dict(torch.load(state_path))
             self.eval()
         self.to(DLinear.device)

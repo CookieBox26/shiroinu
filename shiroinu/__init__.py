@@ -17,8 +17,8 @@ def fix_seed(seed=0):
     torch.use_deterministic_algorithms = True
 
 
-def get_conf_and_logger(conf_file, mode):
-    conf = Config.from_conf_file(conf_file, mode)
+def get_conf_and_logger(conf_file):
+    conf = Config.from_conf_file(conf_file)
     logger = Logger(conf.log_dir)
     shutil.copy(conf_file, os.path.join(conf.log_dir, 'conf.toml'))
     return conf, logger
