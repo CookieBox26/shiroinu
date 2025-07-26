@@ -17,13 +17,15 @@ class TSDataset(Dataset):
     def to_tensor(cls, x):
         return torch.tensor(x, dtype=torch.float32, device=cls.device)
 
-    def __init__(self, logger, df, seq_len, horizon):
+    def __init__(self, logger, df, seq_len, horizon, cols_org):
         self.df = df
         self.tsta = list(self.df['timestamp'].values)
         self.tste = list(self.df['timestep'].values)
         del self.df['timestamp'], self.df['timestep']
         self.seq_len = seq_len
         self.horizon = horizon
+        self.cols_org = cols_org
+
         self.n_sample = len(df) - (seq_len - 1) - horizon
         if logger is not None:
             logger.log(f'===== {self.__class__.__name__} instantiated. =====')
@@ -47,6 +49,28 @@ class TSDataset(Dataset):
             self.stds.append(self.df[col].std())
         self.reset_means_stds_for_scale()
 
+    def get_info(self):
+        return {
+            'cols': self.df.columns,
+            'cols_org': self.cols_org,
+            'steps': len(self.df),
+            'n_sample': self.n_sample,
+            'sample_first': [
+                self.tsta[0],
+                self.tsta[0 + self.seq_len - 1],
+                self.tsta[0 + self.seq_len],
+                self.tsta[0 + self.seq_len + self.horizon - 1],
+            ],
+            'sample_last': [
+                self.tsta[self.n_sample - 1],
+                self.tsta[self.n_sample - 1 + self.seq_len - 1],
+                self.tsta[self.n_sample - 1 + self.seq_len],
+                self.tsta[self.n_sample - 1 + self.seq_len + self.horizon - 1],
+            ],
+            'means_for_scale': self.means_for_scale,
+            'stds_for_scale': self.stds_for_scale,
+        }
+
     def reset_means_stds_for_scale(self):
         self.means_for_scale = np.zeros((1, self.n_feats))
         self.stds_for_scale = np.ones((1, self.n_feats))
@@ -66,19 +90,23 @@ class TSDataset(Dataset):
         return self.n_sample
 
     def __getitem__(self, idx):
-        # idx : 参照ステップ開始時点
-        # idx_current : 参照ステップ終了時点 (現在時点)
-        # idx_current + 1 : 予測ステップ開始時点
-        # idx_current + horizon : 予測ステップ終了時点
-        idx_current = idx + self.seq_len - 1
-        tsta = self.tsta[idx:(idx_current + 1)]
-        tste = self.tste[idx:(idx_current + 1)]
-        data = self.df.iloc[idx:(idx_current + 1), :].values
-        datass = (self.df.iloc[idx:(idx_current + 1), :].values - self.means_for_scale) / self.stds_for_scale
-        tsta_future = self.tsta[(idx_current + 1):(idx_current + self.horizon + 1)]
-        tste_future = self.tste[(idx_current + 1):(idx_current + self.horizon + 1)]
-        data_future = self.df.iloc[(idx_current + 1):(idx_current + self.horizon + 1), :].values
-        datass_future = (self.df.iloc[(idx_current + 1):(idx_current + self.horizon + 1), :].values - self.means_for_scale) / self.stds_for_scale
+        # idx :  Start of the reference window
+        # idx + seq_len - 1 :  End of the reference window (current time) (= idx_1 - 1)
+        # idx + seq_len - 1 + 1 :  Start of the prediction window (= idx_1)
+        # idx + seq_len - 1 + horizon :  End of the prediction window
+        idx_1 = idx + self.seq_len
+        idx_2 = idx + self.seq_len + self.horizon
+
+        tsta = self.tsta[idx:idx_1]
+        tste = self.tste[idx:idx_1]
+        data = self.df.iloc[idx:idx_1, :].values
+        datass = (self.df.iloc[idx:idx_1, :].values - self.means_for_scale) / self.stds_for_scale
+
+        tsta_future = self.tsta[idx_1:idx_2]
+        tste_future = self.tste[idx_1:idx_2]
+        data_future = self.df.iloc[idx_1:idx_2, :].values
+        datass_future = (self.df.iloc[idx_1:idx_2, :].values - self.means_for_scale) / self.stds_for_scale
+
         return TSDataset.TSBatch(tsta, tste, data, datass, tsta_future, tste_future, data_future, datass_future)
 
     @staticmethod
@@ -125,12 +153,13 @@ class TSDataManager:
     def load_data(self):
         df = pd.read_csv(self.path)
         df.columns = [str(col) for col in df.columns]
-        cols = [self.colname_timestamp]
+        cols = []
         if self.white_list != '':
             cols += self.white_list
         else:
             cols += [col for col in df.columns if col != self.colname_timestamp]
-        df = df.loc[:, cols]
+        self.cols_org = cols
+        df = df.loc[:, [self.colname_timestamp] + cols]
         self.n_channel = len(df.columns) - 1
         df.columns = ['timestamp'] + [f'y{i}' for i in range(self.n_channel)]
         n_rows = len(df)
@@ -146,7 +175,7 @@ class TSDataManager:
 
     def get_dataset(self, logger, data_range):
         df = self.get_range(data_range)
-        return TSDataset(logger, df, self.seq_len, self.pred_len)
+        return TSDataset(logger, df, self.seq_len, self.pred_len, self.cols_org)
 
     def get_data_loader(
         self,

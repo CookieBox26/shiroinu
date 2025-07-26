@@ -1,8 +1,9 @@
 from shiroinu.data_manager import TSDataManager
 from shiroinu.batch_sampler import BatchSampler
 from shiroinu import get_conf_and_logger, fix_seed, load_class, load_instance
+from shiroinu.report import report
 import torch
-import sys
+import argparse
 
 
 def predict_and_backward(batch, criterion, model, optimizer):
@@ -59,8 +60,8 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
         batch_sampler=BatchSampler,
         batch_sampler_kwargs={'batch_size': batch_size_eval},
     )
-    logger.add_info('means_for_scale', data_loader_valid.dataset.means_for_scale)
-    logger.add_info('stds_for_scale', data_loader_valid.dataset.stds_for_scale)
+    logger.add_info('data_train', data_loader_train.dataset.get_info())
+    logger.add_info('data_valid', data_loader_valid.dataset.get_info())
 
     loss_valid_best = float('inf')
     early_stop_counter = 0
@@ -134,8 +135,7 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
     logger.end_task()
 
 
-def main():
-    conf, logger = get_conf_and_logger(sys.argv[1])
+def run_tasks(conf, logger):
     dm = TSDataManager(**conf.data)
 
     criteria = []
@@ -160,5 +160,16 @@ def main():
             run_task_eval(logger, dm, criterion_eval, models_eval, task, conf.batch_size_eval)
 
 
+def run(conf_file, report_only):
+    conf, logger = get_conf_and_logger(conf_file)
+    if not report_only:
+        run_tasks(conf, logger)
+    report(conf_file)
+
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('conf_file')
+    parser.add_argument('-r', '--report_only', action='store_true')
+    args = parser.parse_args()
+    run(args.conf_file, args.report_only)
