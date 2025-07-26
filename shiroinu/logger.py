@@ -17,6 +17,10 @@ class Logger:
         self.log_file.write(' '.join([str(v) for v in args]) + '\n')
         self.log_file.flush()
 
+    def skip_task(self):
+        self.i_task += 1
+        print(f'===== skipping task {self.i_task} =====')
+
     def start_task(self):
         self.i_task += 1
         print(f'===== task {self.i_task} =====')
@@ -47,9 +51,9 @@ class Logger:
     def end_task(self):
         self.log_file.close()
         info_path = os.path.join(self.log_dir, f'info_task_{self.i_task}.toml')
-        if len(self.info['epochs']) > 0:
-            with open(info_path, mode='w', encoding='utf8', newline='\n') as ofile:
-                toml.dump(self.info, ofile)
+        with open(info_path, mode='w', encoding='utf8', newline='\n') as ofile:
+            toml.dump(self.info, ofile)
+        if 'epoch_id_best' in self.info:
             epoch_id_best = self.info['epoch_id_best']
             self.d_epoch_id_best[self.i_task] = epoch_id_best
             print(f'{epoch_id_best=}')

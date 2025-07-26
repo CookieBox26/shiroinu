@@ -13,6 +13,16 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.size'] = 11
 
 
+def pairs_to_table(pairs):
+    tbody = Elm('tbody')
+    for pair in pairs:
+        tbody.append(Elm('tr'))
+        tbody.inner[-1].append(Elm('td', f'<b>{pair[0]}</b>'))
+        for v in pair[1]:
+            tbody.inner[-1].append(Elm('td', f'{v}'))
+    return Elm('table', tbody).set_attr('border', '1')
+
+
 def _add_picture(output_path, rp, filename, emb=False):
     kwargs = {'format': 'png', 'bbox_inches': 'tight'}
     if emb:
@@ -65,10 +75,23 @@ def _get_ranges_df(conf, info, key):
 
 def _report_task_train(rp, conf, i_task, info):
     task = conf.tasks[i_task]
+
     for type_ in ['train', 'valid']:
         rp.append(Elm('h3', f'data_{type_}'))
+        rp.append(os.path.basename(conf.data['path']))
         rp.append(_get_channels_df(info, f'data_{type_}').to_html())
         rp.append(_get_ranges_df(conf, info, f'data_{type_}').to_html())
+
+    rp.append(Elm('h3', 'Model and Optimizer'))
+    model_settings = conf.get_model(**task.model)
+    pairs = [
+        ('model_path', [model_settings['path']]),
+        ('model_params', [model_settings['params']])]
+    rp.append(pairs_to_table(pairs))
+    pairs = [
+        (key, [getattr(task, key).path, getattr(task, key).params])
+        for key in ['batch_sampler', 'optimizer', 'lr_scheduler']]
+    rp.append(pairs_to_table(pairs))
 
     if (
         (task.criterion_target['path'] == conf.criteria[0]['path'])
@@ -88,6 +111,64 @@ def _report_task_train(rp, conf, i_task, info):
         _plot_loss_graph(info, [f'loss_{i}_per_sample_valid'], conf.criteria[1]['path'])
         _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_{i}_valid.png')
 
+    rp.append(pd.DataFrame({
+        'epoch_id_best': [info['epoch_id_best']],
+        'loss_valid_best': [info['epochs'][info['epoch_id_best']]['loss_0_per_sample_valid']],
+    }).to_html(index=False))
+
+
+def _report_task_eval(rp, conf, i_task, info):
+    task = conf.tasks[i_task]
+    n_models = len(task.models)
+
+    rp.append(Elm('h3', 'data'))
+    rp.append(os.path.basename(conf.data['path']))
+    rp.append(_get_channels_df(info, 'data').to_html())
+    rp.append(_get_ranges_df(conf, info, 'data').to_html())
+
+    rp.append(Elm('h3', 'Criterion'))
+    pairs = [(
+        'criterion_eval',
+        [task.criterion_eval['path'], task.criterion_eval['params']],
+    )]
+    rp.append(pairs_to_table(pairs))
+
+    rp.append(Elm('h3', 'Models'))
+    pairs = []
+    for i_model, model_ in enumerate(task.models):
+        model_settings = conf.get_model(**model_)
+        pairs.append((
+            f'model_{i_model}',
+            [model_settings['path'] + '<br/>' + str(model_settings['params'])],
+        ))
+    rp.append(pairs_to_table(pairs))
+
+    rp.append(Elm('h3', 'Loss per Sample'))
+    def get_base_df():
+        return pd.DataFrame({'cols_org': info['data']['cols_org']}, index=info['data']['cols'])
+    df_ = get_base_df()
+    for i_model in range(n_models):
+        df_[f'model_{i_model}'] = info['loss_per_sample'][i_model]
+    d = {}
+    for col in df_.columns:
+        if col == 'cols_org':
+            d[col] = ''
+        else:
+            d[col] = df_[col].mean()
+    df_ = pd.concat([df_, pd.DataFrame(d, index=['mean'])])
+    rp.append(df_.to_html())
+
+    for i_model in range(n_models):
+        rp.append(Elm('h4', f'model_{i_model}'))
+        df_ = get_base_df()
+        for i_pct, pct in enumerate(task.percentile_points):
+            df_[f'{pct:.0%}'] = info['percentiles'][i_model][i_pct]
+        for i_pct in range(int(len(task.percentile_points) / 2)):
+            pct_0 = task.percentile_points[i_pct]
+            pct_1 = task.percentile_points[- (i_pct + 1)]
+            df_[f'{pct_1:.0%}-{pct_0:.0%}'] = df_[f'{pct_1:.0%}'] - df_[f'{pct_0:.0%}']
+        rp.append(df_.to_html())
+
 
 def _report_task(rp, conf, i_task):
     task = conf.tasks[i_task]
@@ -96,6 +177,8 @@ def _report_task(rp, conf, i_task):
     rp.append(Elm('h2', f'task_{i_task} ({task.task_type})'))
     if task.task_type == 'train':
         _report_task_train(rp, conf, i_task, info)
+    elif task.task_type == 'eval':
+        _report_task_eval(rp, conf, i_task, info)
 
 
 def report(conf_file):
@@ -103,7 +186,7 @@ def report(conf_file):
 
     rp = shirotsubaki.report.Report()
     rp.style.set('body', 'width', '1200px')
-    rp.style.set('table', 'margin-bottom', '0.5em')
+    rp.style.set('table', 'margin', '0.5em 0')
     def append(self, v):
         self.append_to('content', v)
     rp.append = types.MethodType(append, rp)

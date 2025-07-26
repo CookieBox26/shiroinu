@@ -103,39 +103,33 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
         batch_sampler=BatchSampler,
         batch_sampler_kwargs={'batch_size': batch_size_eval},
     )
+    logger.add_info('data', data_loader.dataset.get_info())
 
-    model_0 = models[0]
-    model_1 = models[1]
-
-    data_loss0_detail_0 = torch.empty(0, dm.n_channel)
-    data_loss0_detail_1 = torch.empty(0, dm.n_channel)
-
+    n_model = len(models)
+    data_loss_detail = [torch.empty(0, dm.n_channel)] * n_model
     for i_batch, batch in enumerate(data_loader):
-        true = model_0.extract_true(batch)
-        with torch.no_grad():
-            pred_0, _ = model_0(*model_0.extract_args(batch))
-            pred_1, _ = model_1(*model_1.extract_args(batch))
-            pred_0 = model_0.rescale(data_loader.dataset, pred_0)
-            pred_1 = model_1.rescale(data_loader.dataset, pred_1)
-            loss0_0, loss0_detail_0 = criterion(pred_0, true)
-            loss0_1, loss0_detail_1 = criterion(pred_1, true)
+        true = models[0].extract_true(batch)
+        for i_model, model in enumerate(models):
+            with torch.no_grad():
+                pred, _ = model(*model.extract_args(batch))
+                pred = model.rescale(data_loader.dataset, pred)
+                _, loss_detail = criterion(pred, true)
+            data_loss_detail[i_model] = torch.cat([data_loss_detail[i_model], loss_detail], dim=0)
 
-        data_loss0_detail_0 = torch.cat([data_loss0_detail_0, loss0_detail_0], dim=0)
-        data_loss0_detail_1 = torch.cat([data_loss0_detail_1, loss0_detail_1], dim=0)
-
-    logger.log(data_loss0_detail_0.size())  # n_sample, num_of_roads
-    total_loss0_0 = data_loss0_detail_0.mean(dim=0)
-    total_loss0_1 = data_loss0_detail_1.mean(dim=0)
-    logger.log(total_loss0_0)
-    logger.log(total_loss0_1)
-
-    percentiles = torch.tensor([0.05, 0.25, 0.5, 0.75, 0.95])
-    logger.log(torch.quantile(data_loss0_detail_0, percentiles, dim=0))
-    logger.log(torch.quantile(data_loss0_detail_1, percentiles, dim=0))
+    logger.log(data_loss_detail[0].size())  # n_sample, num_of_roads
+    loss_per_sample = [data_loss_detail[i_model].mean(dim=0).tolist() for i_model in range(n_model)]
+    logger.add_info('loss_per_sample', loss_per_sample)
+    percentiles = [
+        torch.quantile(
+            data_loss_detail[i_model],
+            torch.tensor(task.percentile_points), dim=0).tolist()
+        for i_model in range(n_model)
+    ]
+    logger.add_info('percentiles', percentiles)
     logger.end_task()
 
 
-def run_tasks(conf, logger):
+def run_tasks(conf, logger, li_skip_task_id):
     dm = TSDataManager(**conf.data)
 
     criteria = []
@@ -143,7 +137,10 @@ def run_tasks(conf, logger):
         criteria.append(load_instance(**criterion))
 
     model = None
-    for task in conf.tasks:
+    for i_task, task in enumerate(conf.tasks):
+        if i_task in li_skip_task_id:
+            logger.skip_task()
+            continue
         if task.task_type == 'train':
             criterion_target = load_instance(**task.criterion_target)
             if (model is None) or task.reset_model:
@@ -160,10 +157,11 @@ def run_tasks(conf, logger):
             run_task_eval(logger, dm, criterion_eval, models_eval, task, conf.batch_size_eval)
 
 
-def run(conf_file, report_only):
+def run(conf_file, skip_task_ids, report_only):
     conf, logger = get_conf_and_logger(conf_file)
+    li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
-        run_tasks(conf, logger)
+        run_tasks(conf, logger, li_skip_task_id)
     report(conf_file)
 
 
@@ -171,5 +169,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('conf_file')
     parser.add_argument('-r', '--report_only', action='store_true')
+    parser.add_argument('-s', '--skip_task_ids', type=str, default='')
     args = parser.parse_args()
-    run(args.conf_file, args.report_only)
+    run(args.conf_file, args.skip_task_ids, args.report_only)

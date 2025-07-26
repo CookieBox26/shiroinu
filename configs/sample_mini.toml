@@ -86,6 +86,7 @@ models = [
 {id = 0, state_path = ""},
 {id = 1, state_path = "outputs/sample_mini/model_task_0_best.pth"},
 ]
+percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]
 path = "shiroinu.criteria.MAELoss"
 params = {"n_channel" = 4}
