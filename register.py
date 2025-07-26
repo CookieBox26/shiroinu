@@ -28,7 +28,10 @@ def main():
     for target in targets:
         file_0 = os.path.join(target, 'report.html')
         file_1 = os.path.basename(target) + '.html'
-        copy(target, file_0, file_1)
+        if os.path.isfile(file_0):
+            copy(target, file_0, file_1)
+        elif not os.path.isfile(file_1):
+            assert False, 'No such file: ' + file_0
         ofile.write(f'- [{file_1}]({file_1})\n')
     ofile.close()
 
