@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report</title>
+<style>
+body {
+  margin: 20px;
+  color: #303030;
+  font-family: 'Verdana', 'BIZ UDGothic', sans-serif;
+  font-size: 90%;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  width: 1200px;
+}
+table {
+  border-collapse: collapse;
+  margin-bottom: 0.5em;
+}
+th, td {
+  border: 1px solid #303030;
+  padding: 0.2em 0.4em;
+}
+</style>
+</head>
+<body>
+<h1>
+sample_mini
+</h1>
+
+<h2>
+task_0 (train)
+</h2>
+
+<h3>
+data_train
+</h3>
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cols_org</th>
+      <th>means_for_scale</th>
+      <th>stds_for_scale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>y0</th>
+      <td>0</td>
+      <td>0.044810442407333596</td>
+      <td>0.05734220024720156</td>
+    </tr>
+    <tr>
+      <th>y1</th>
+      <td>1</td>
+      <td>0.04580573933838183</td>
+      <td>0.050880728724769723</td>
+    </tr>
+    <tr>
+      <th>y2</th>
+      <td>2</td>
+      <td>0.09534894380231168</td>
+      <td>0.0764800457388236</td>
+    </tr>
+    <tr>
+      <th>y3</th>
+      <td>3</td>
+      <td>0.05242506974890395</td>
+      <td>0.03353747976649461</td>
+    </tr>
+  </tbody>
+</table>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>seq_len</th>
+      <th>pred_len</th>
+      <th>Start of Input Window</th>
+      <th>End of Input Window</th>
+      <th>Start of Prediction Window</th>
+      <th>End of Prediction Window</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>sample 0</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-07-01 02:00:00</td>
+      <td>2016-07-29 01:00:00</td>
+      <td>2016-07-29 02:00:00</td>
+      <td>2016-08-05 01:00:00</td>
+    </tr>
+    <tr>
+      <th>sample 1669</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-09-08 15:00:00</td>
+      <td>2016-10-06 14:00:00</td>
+      <td>2016-10-06 15:00:00</td>
+      <td>2016-10-13 14:00:00</td>
+    </tr>
+  </tbody>
+</table>
+<h3>
+data_valid
+</h3>
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cols_org</th>
+      <th>means_for_scale</th>
+      <th>stds_for_scale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>y0</th>
+      <td>0</td>
+      <td>0.044810442407333596</td>
+      <td>0.05734220024720156</td>
+    </tr>
+    <tr>
+      <th>y1</th>
+      <td>1</td>
+      <td>0.04580573933838183</td>
+      <td>0.050880728724769723</td>
+    </tr>
+    <tr>
+      <th>y2</th>
+      <td>2</td>
+      <td>0.09534894380231168</td>
+      <td>0.0764800457388236</td>
+    </tr>
+    <tr>
+      <th>y3</th>
+      <td>3</td>
+      <td>0.05242506974890395</td>
+      <td>0.03353747976649461</td>
+    </tr>
+  </tbody>
+</table>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>seq_len</th>
+      <th>pred_len</th>
+      <th>Start of Input Window</th>
+      <th>End of Input Window</th>
+      <th>Start of Prediction Window</th>
+      <th>End of Prediction Window</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>sample 0</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-09-08 16:00:00</td>
+      <td>2016-10-06 15:00:00</td>
+      <td>2016-10-06 16:00:00</td>
+      <td>2016-10-13 15:00:00</td>
+    </tr>
+    <tr>
+      <th>sample 1670</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-11-17 06:00:00</td>
+      <td>2016-12-15 05:00:00</td>
+      <td>2016-12-15 06:00:00</td>
+      <td>2016-12-22 05:00:00</td>
+    </tr>
+  </tbody>
+</table>
+<img src="img/task_0_loss_train_valid.png"/>
+
+<img src="img/task_0_loss_1_valid.png"/>
+
+<h2>
+task_1 (train)
+</h2>
+
+<h3>
+data_train
+</h3>
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cols_org</th>
+      <th>means_for_scale</th>
+      <th>stds_for_scale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>y0</th>
+      <td>0</td>
+      <td>0.047344342629482075</td>
+      <td>0.054492789167097884</td>
+    </tr>
+    <tr>
+      <th>y1</th>
+      <td>1</td>
+      <td>0.0470809561752988</td>
+      <td>0.0470804179163464</td>
+    </tr>
+    <tr>
+      <th>y2</th>
+      <td>2</td>
+      <td>0.11188390438247015</td>
+      <td>0.0884918801114005</td>
+    </tr>
+    <tr>
+      <th>y3</th>
+      <td>3</td>
+      <td>0.056999681274900384</td>
+      <td>0.03355493749226205</td>
+    </tr>
+  </tbody>
+</table>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>seq_len</th>
+      <th>pred_len</th>
+      <th>Start of Input Window</th>
+      <th>End of Input Window</th>
+      <th>Start of Prediction Window</th>
+      <th>End of Prediction Window</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>sample 0</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-09-08 16:00:00</td>
+      <td>2016-10-06 15:00:00</td>
+      <td>2016-10-06 16:00:00</td>
+      <td>2016-10-13 15:00:00</td>
+    </tr>
+    <tr>
+      <th>sample 1670</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-11-17 06:00:00</td>
+      <td>2016-12-15 05:00:00</td>
+      <td>2016-12-15 06:00:00</td>
+      <td>2016-12-22 05:00:00</td>
+    </tr>
+  </tbody>
+</table>
+<h3>
+data_valid
+</h3>
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cols_org</th>
+      <th>means_for_scale</th>
+      <th>stds_for_scale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>y0</th>
+      <td>0</td>
+      <td>0.047344342629482075</td>
+      <td>0.054492789167097884</td>
+    </tr>
+    <tr>
+      <th>y1</th>
+      <td>1</td>
+      <td>0.0470809561752988</td>
+      <td>0.0470804179163464</td>
+    </tr>
+    <tr>
+      <th>y2</th>
+      <td>2</td>
+      <td>0.11188390438247015</td>
+      <td>0.0884918801114005</td>
+    </tr>
+    <tr>
+      <th>y3</th>
+      <td>3</td>
+      <td>0.056999681274900384</td>
+      <td>0.03355493749226205</td>
+    </tr>
+  </tbody>
+</table>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>seq_len</th>
+      <th>pred_len</th>
+      <th>Start of Input Window</th>
+      <th>End of Input Window</th>
+      <th>Start of Prediction Window</th>
+      <th>End of Prediction Window</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>sample 0</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-09-08 16:00:00</td>
+      <td>2016-10-06 15:00:00</td>
+      <td>2016-10-06 16:00:00</td>
+      <td>2016-10-13 15:00:00</td>
+    </tr>
+    <tr>
+      <th>sample 1670</th>
+      <td>672</td>
+      <td>168</td>
+      <td>2016-11-17 06:00:00</td>
+      <td>2016-12-15 05:00:00</td>
+      <td>2016-12-15 06:00:00</td>
+      <td>2016-12-22 05:00:00</td>
+    </tr>
+  </tbody>
+</table>
+<img src="img/task_1_loss_train_valid.png"/>
+
+<img src="img/task_1_loss_1_valid.png"/>
+
+<h2>
+task_2 (eval)
+</h2>
+
+</body>
+</html>
