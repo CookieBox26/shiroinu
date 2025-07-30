@@ -1,1 +1,2 @@
 - [sample_mini_0.html](sample_mini_0.html)
+- [sample_mini_1.html](sample_mini_1.html)
