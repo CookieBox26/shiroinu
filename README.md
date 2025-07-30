@@ -10,7 +10,7 @@ Then, specify the path in `config/xxx.toml`.
 Please define the settings in `config/xxx.toml` in advance.
 
 ```
-python run.py configs/sample_mini.toml
+python run.py configs/sample_mini_0.toml
 ```
 
 ## Note

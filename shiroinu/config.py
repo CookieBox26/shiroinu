@@ -43,6 +43,8 @@ class Config:
     def get_model(self, id, state_path=''):
         model_ = copy.deepcopy(self.models[id])
         if state_path != '':
+            if '<HERE>' in state_path:
+                state_path = state_path.replace('<HERE>', self.log_dir)
             model_['params']['state_path'] = state_path
         return model_
 

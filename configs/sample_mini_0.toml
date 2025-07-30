@@ -1,4 +1,4 @@
-out_dir_name = "sample_mini"
+out_dir_name = "sample_mini_0"
 suffix = false
 batch_size_eval = 256
 
@@ -61,7 +61,7 @@ params = {"T_max" = 10}
 # -------------------- tasks --------------------
 
 [[tasks]]
-task_type = 'train'
+task_type = "train"
 task_template_id = 0
 n_epoch = 40
 n_epoch_ref = -1
@@ -70,7 +70,7 @@ train_range = [0.0, 0.1]
 valid_range = [0.1, 0.2]
 
 [[tasks]]
-task_type = 'train'
+task_type = "train"
 task_template_id = 0
 n_epoch = -1
 n_epoch_ref = 0
@@ -79,14 +79,14 @@ train_range = [0.1, 0.2]
 valid_range = [0.1, 0.2]
 
 [[tasks]]
-task_type = 'eval'
+task_type = "eval"
 train_range = [0.1, 0.2]  # for scaling
 valid_range = [0.2, 0.3]
 models = [
 {id = 0, state_path = ""},
-{id = 1, state_path = "outputs/sample_mini/model_task_0_best.pth"},
+{id = 1, state_path = "<HERE>model_best_task_0.pth"},
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]
 path = "shiroinu.criteria.MAELoss"
-params = {"n_channel" = 4}
+params = {}

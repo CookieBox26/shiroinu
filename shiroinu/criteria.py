@@ -1,20 +1,40 @@
 import torch
 
 
-class MAELoss(torch.nn.Module):
-    def __init__(self, n_channel):
-        super(MAELoss, self).__init__()
+class MSELoss(torch.nn.Module):
+    def set_w_channel(self, n_channel):
         self.w_channel = torch.ones(n_channel, dtype=torch.float)
         self.w_channel /= self.w_channel.sum()
+    def __init__(self, n_channel=0):
+        super().__init__()
+        self.w_channel = None
+        if n_channel > 0:
+            self.set_w_channel(n_channel)
+    def calc_loss(self, pred, true):
+        return (pred - true) ** 2
     def forward(self, pred, true):
-        ae = torch.abs(pred - true)  # batch_size, pred_len, num_of_roads
-        mae = ae.mean(dim=1)  # batch_size, num_of_roads
-        return torch.einsum('j,ij->ij', (self.w_channel, mae)), mae.detach().clone()
+        if self.w_channel is None:
+            self.set_w_channel(pred.size()[2])
+        loss = self.calc_loss(pred, true)  # batch_size, pred_len, num_of_roads
+        me_of_each_sample_channel = loss.mean(dim=1)  # batch_size, num_of_roads
+        me_of_each_sample = torch.einsum('j,ij->ij', (self.w_channel, me_of_each_sample_channel))
+        return (
+            me_of_each_sample.mean(),  # (scalar)
+            me_of_each_sample,  # batch_size
+            me_of_each_sample_channel,  # batch_size, n_channel
+        )
+
+
+class MAELoss(MSELoss):
+    def __init__(self, n_channel=0):
+        super().__init__(n_channel)
+    def calc_loss(self, pred, true):
+        return torch.abs(pred - true)
 
 
 class ExceedanceRate(torch.nn.Module):
     def __init__(self, n_channel, threshold=0.01):
-        super(ExceedanceRate, self).__init__()
+        super().__init__()
         self.w_channel = torch.ones(n_channel, dtype=torch.float)
         self.w_channel /= self.w_channel.sum()
         self.threshold = threshold
@@ -27,7 +47,7 @@ class ExceedanceRate(torch.nn.Module):
 
 class DiffLoss(torch.nn.Module):
     def __init__(self, n_channel, threshold=0.005):
-        super(DiffLoss, self).__init__()
+        super().__init__()
         self.w_channel = torch.ones(n_channel, dtype=torch.float)
         self.w_channel /= self.w_channel.sum()
         self.threshold = threshold

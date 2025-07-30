@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import os
 import toml
 
@@ -42,11 +43,18 @@ class Logger:
         self.info['epochs'][-1][key] = value
 
     def save_model(self, model, suffix):
-        model_path = os.path.join(self.log_dir, f'model_task_{self.i_task}{suffix}.pth')
+        model_path = os.path.join(self.log_dir, f'model{suffix}_task_{self.i_task}.pth')
         torch.save(model.state_dict(), model_path)
         self.info[f'epoch_id{suffix}'] = self.i_epoch
         if self.print_epoch and (suffix == '_best'):
             print('loss_valid_best', self.info['epochs'][-1]['loss_0_per_sample_valid'])
+
+    def save_array(self, key, value):
+        array_path = os.path.join(self.log_dir, f'{key}_task_{self.i_task}.npy')
+        if isinstance(value, np.ndarray):
+            np.save(array_path, value)
+        else:
+            np.save(array_path, value.clone().detach().cpu().numpy())
 
     def end_task(self):
         self.log_file.close()

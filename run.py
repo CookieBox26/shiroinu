@@ -91,7 +91,7 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
                     stop = True
         if stop:
             break
-    logger.save_model(model, '_last')
+    # logger.save_model(model, '_last')
     logger.end_task()
 
 
@@ -109,14 +109,22 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
     data_loss_detail = [torch.empty(0, dm.n_channel)] * n_model
     for i_batch, batch in enumerate(data_loader):
         true = models[0].extract_true(batch)
+        if i_batch == 0:
+            logger.save_array('sample_0_true', true[0])
+            logger.save_array('sample_0_tsta', batch.tsta_future[0])
         for i_model, model in enumerate(models):
             with torch.no_grad():
                 pred, _ = model(*model.extract_args(batch))
                 pred = model.rescale(data_loader.dataset, pred)
-                _, loss_detail = criterion(pred, true)
+                _, _, loss_detail = criterion(pred, true)
+                loss_detail = loss_detail.detach().clone()
             data_loss_detail[i_model] = torch.cat([data_loss_detail[i_model], loss_detail], dim=0)
+            if i_batch == 0:
+                logger.save_array(f'sample_0_model_{i_model}', pred[0])
 
-    logger.log(data_loss_detail[0].size())  # n_sample, num_of_roads
+    # print(data_loss_detail[i_model].size())  # n_sample, n_channel
+    for i_model in range(n_model):
+        print(f'model_{i_model}:', data_loss_detail[i_model].mean().item())
     loss_per_sample = [data_loss_detail[i_model].mean(dim=0).tolist() for i_model in range(n_model)]
     logger.add_info('loss_per_sample', loss_per_sample)
     percentiles = [
