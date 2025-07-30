@@ -1,4 +1,5 @@
 from shiroinu.models.base_model import BaseModel
+from shiroinu.models.simple_average import SimpleAverage
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -51,15 +52,43 @@ class DLinear(BaseModel):
         return x, {'seasonal': seasonal_output, 'trend': trend_output}
 
     def extract_input(self, batch):
-        return [batch.datass[:, -self.seq_len:, :]]
+        return batch.datass[:, -self.seq_len:, :]
 
     def extract_target(self, batch):
         return batch.datass_future[:, :self.pred_len]
 
     def predict(self, batch):
         input = self.extract_input(batch)
-        output, _ = self(*input)
+        output, _ = self(input)
         return self.dataset.rescale(output)
+
+
+class DLinearRes(DLinear):
+    """Take the difference from the naive forecast
+    """
+    def __init__(self, seq_len, pred_len, kernel_size, period_len, bias=False):
+        super().__init__(seq_len, pred_len, kernel_size, bias)
+        self.baseline = SimpleAverage.create(**{
+            'seq_len': seq_len,
+            'pred_len': pred_len,
+            'period_len': period_len,
+        })
+
+    def extract_input(self, batch):
+        input_ = batch.datass[:, -self.seq_len:, :]
+        naive = self.baseline(input_)
+        return input_ - naive.repeat(1, int(self.seq_len / self.baseline.period_len), 1)
+
+    def extract_target(self, batch):
+        naive = self.baseline(batch.datass[:, -self.seq_len:, :])
+        target = batch.datass_future[:, :self.pred_len]
+        return target - naive
+
+    def predict(self, batch):
+        naive = self.baseline(batch.datass[:, -self.seq_len:, :])
+        input = self.extract_input(batch)
+        output, _ = self(input)
+        return self.dataset.rescale(naive + output)
 
 
 class DLinearSparse(DLinear):
@@ -74,7 +103,6 @@ class DLinearSparse(DLinear):
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.decompsition = series_decomp(kernel_size)
-
         self.not_frozen = [i for i in range(0, seq_len, pred_len)]
         self.Linear_Seasonal = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
@@ -83,7 +111,6 @@ class DLinearSparse(DLinear):
         seasonal_init, trend_init = self.decompsition(x)
         seasonal_init = seasonal_init.permute(0, 2, 1)
         trend_init = trend_init.permute(0, 2, 1)
-
         Linear_Seasonal = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(self.device)
         Linear_Trend = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(self.device)
         for i, i_nf in enumerate(self.not_frozen):

@@ -169,7 +169,7 @@ def _report_task_eval(rp, conf, i_task, info):
     pred_len, n_channel = true.shape
     for i_channel in range(n_channel):
         desc = OrderedDict()
-        fig, ax = plt.subplots(nrows=1, figsize=(6, 2))
+        fig, ax = plt.subplots(nrows=1, figsize=(8, 2))
         x = list(range(pred_len))
         desc['true'] = ax.plot(x, [y_[i_channel] for y_ in true])[0]
         for i_model in range(n_model):

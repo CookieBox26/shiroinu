@@ -30,12 +30,12 @@ class SimpleAverage(BaseModel):
         return torch.einsum('j,ijkl->ikl', (w, x_view))
 
     def extract_input(self, batch):
-        return [batch.data[:, -self.seq_len:, :]]
+        return batch.data[:, -self.seq_len:, :]
 
     def extract_target(self, batch):
         return batch.data_future[:, :self.pred_len]
 
     def predict(self, batch):
         input = self.extract_input(batch)
-        output = self(*input)
+        output = self(input)
         return output

@@ -146,7 +146,10 @@ def run_tasks(conf, logger, li_skip_task_id):
                 fix_seed()
                 model_settings = conf.get_model(**task.model)
                 model = create_instance(**model_settings)
-                print(f'{model.__class__.__name__} loaded to {model.device}')
+                print(
+                    f'{model.__class__.__name__}({model.count_trainable_parameters()}) '
+                    f'loaded to {model.device}'
+                )
             run_task(logger, dm, criterion_target, criteria, model, task, conf.batch_size_eval)
         if task.task_type == 'eval':
             criterion_eval = load_instance(**task.criterion_eval)

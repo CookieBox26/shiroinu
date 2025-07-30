@@ -32,9 +32,12 @@ class BaseModel(nn.Module, ABC):
     def get_loss(self, batch, criterion):
         input = self.extract_input(batch)
         target = self.extract_target(batch)
-        output = self(*input)
+        output = self(input)
         if isinstance(output, tuple):
             loss = criterion(output[0], target)
         else:
             loss = criterion(output, target)
         return loss, input, target, output
+
+    def count_trainable_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
