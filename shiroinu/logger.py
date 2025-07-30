@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import os
 import toml
+import time
 
 
 class Logger:
@@ -29,6 +30,7 @@ class Logger:
         self.log_file = open(log_path, mode='w', encoding='utf-8', newline='\n')
         self.info = {'epochs': []}
         self.i_epoch = -1
+        self.time_0 = time.perf_counter()
 
     def add_info(self, key, value):
         self.info[key] = value
@@ -57,6 +59,9 @@ class Logger:
             np.save(array_path, value.clone().detach().cpu().numpy())
 
     def end_task(self):
+        duration = time.perf_counter() - self.time_0
+        print(f'duration of task {self.i_task}: {duration:.3f}s')
+
         self.log_file.close()
         info_path = os.path.join(self.log_dir, f'info_task_{self.i_task}.toml')
         with open(info_path, mode='w', encoding='utf8', newline='\n') as ofile:

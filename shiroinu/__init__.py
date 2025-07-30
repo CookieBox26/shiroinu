@@ -37,3 +37,8 @@ def load_class(path):
 def load_instance(path, params):
     model_class = load_class(path)
     return model_class(**params)
+
+
+def create_instance(path, params):
+    model_class = load_class(path)
+    return model_class.create(**params)

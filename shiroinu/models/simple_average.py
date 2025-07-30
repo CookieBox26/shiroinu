@@ -1,8 +1,9 @@
+from shiroinu.models.base_model import BaseModel
 import torch
 import torch.nn as nn
 
 
-class SimpleAverage(nn.Module):
+class SimpleAverage(BaseModel):
     def __init__(
         self,
         seq_len,
@@ -10,13 +11,11 @@ class SimpleAverage(nn.Module):
         period_len,
         decay_rate=1.0,
     ):
-        super(SimpleAverage, self).__init__()
+        super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.period_len = period_len
         self.decay_rate = decay_rate
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.to(self.device)
 
     def forward(self, x):
         batch_size, seq_len, num_of_roads = x.shape
@@ -28,19 +27,15 @@ class SimpleAverage(nn.Module):
         n_period = x_view.shape[1]
         w = torch.tensor([self.decay_rate**i for i in reversed(range(n_period))], dtype=torch.float)
         w = w / w.sum()
-        return torch.einsum('j,ijkl->ikl', (w, x_view)), {}
+        return torch.einsum('j,ijkl->ikl', (w, x_view))
 
-    def extract_args(self, batch):
+    def extract_input(self, batch):
         return [batch.data[:, -self.seq_len:, :]]
 
-    def extract_true(self, batch):
+    def extract_target(self, batch):
         return batch.data_future[:, :self.pred_len]
 
-    def get_loss(self, pred, info, true, criterion, backward=False):
-        loss = criterion(pred, true)
-        if backward:
-            loss.backward()
-        return loss
-
-    def rescale(self, dataset, x):
-        return x
+    def predict(self, batch):
+        input = self.extract_input(batch)
+        output = self(*input)
+        return output

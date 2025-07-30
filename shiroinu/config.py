@@ -62,8 +62,6 @@ class Config:
                 self._set_models(d)
             elif field == 'tasks':
                 self._set_tasks(d)
-            elif field == 'models_eval':
-                self._set_models_eval(d)
             else:
                 setattr(self, field, d[field])
 

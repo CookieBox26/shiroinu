@@ -1,3 +1,4 @@
+from shiroinu.models.base_model import BaseModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,7 +7,7 @@ import numpy as np
 
 class series_decomp(nn.Module):
     def __init__(self, kernel_size):
-        super(series_decomp, self).__init__()
+        super().__init__()
         self.kernel_size = kernel_size
         self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=1, padding=0)
 
@@ -24,39 +25,20 @@ class series_decomp(nn.Module):
         return res, moving_mean
 
 
-class DLinear(nn.Module):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+class DLinear(BaseModel):
     def __init__(
         self,
         seq_len,
         pred_len,
         kernel_size,
-        state_path=None,
         bias=False,
     ):
-        super(DLinear, self).__init__()
+        super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.decompsition = series_decomp(kernel_size)
         self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len, bias=bias)
-        if (state_path is not None) and (state_path != ''):
-            self.load_state_dict(torch.load(state_path))
-            self.eval()
-        self.to(DLinear.device)
-
-    def extract_args(self, batch):
-        return [batch.datass[:, -self.seq_len:, :]]
-
-    def extract_true(self, batch):
-        return batch.datass_future[:, :self.pred_len]
-
-    def get_loss(self, pred, info, true, criterion, backward=False):
-        loss = criterion(pred, true)
-        if backward:
-            loss.backward()
-        return loss
 
     def forward(self, x):
         seasonal_init, trend_init = self.decompsition(x)
@@ -68,10 +50,51 @@ class DLinear(nn.Module):
         x = x.permute(0, 2, 1)  # to [Batch, Output length, Channel]
         return x, {'seasonal': seasonal_output, 'trend': trend_output}
 
-    def rescale(self, dataset, x):
-        means = dataset.to_tensor(dataset.means_for_scale)
-        stds = dataset.to_tensor(dataset.stds_for_scale)
-        return means + torch.einsum('k,ijk->ijk', (stds, x))
+    def extract_input(self, batch):
+        return [batch.datass[:, -self.seq_len:, :]]
+
+    def extract_target(self, batch):
+        return batch.datass_future[:, :self.pred_len]
+
+    def predict(self, batch):
+        input = self.extract_input(batch)
+        output, _ = self(*input)
+        return self.dataset.rescale(output)
+
+
+class DLinearSparse(DLinear):
+    def __init__(
+        self,
+        seq_len,
+        pred_len,
+        kernel_size,
+        bias=False,
+    ):
+        super().__init__(seq_len, pred_len, kernel_size)
+        self.seq_len = seq_len
+        self.pred_len = pred_len
+        self.decompsition = series_decomp(kernel_size)
+
+        self.not_frozen = [i for i in range(0, seq_len, pred_len)]
+        self.Linear_Seasonal = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
+        self.Linear_Trend = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
+
+    def forward(self, x):
+        seasonal_init, trend_init = self.decompsition(x)
+        seasonal_init = seasonal_init.permute(0, 2, 1)
+        trend_init = trend_init.permute(0, 2, 1)
+
+        Linear_Seasonal = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(self.device)
+        Linear_Trend = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(self.device)
+        for i, i_nf in enumerate(self.not_frozen):
+            for j in range(self.pred_len):
+                Linear_Seasonal[j, i_nf + j] = self.Linear_Seasonal.weight[j, i]
+                Linear_Trend[j, i_nf + j] = self.Linear_Trend.weight[j, i]
+        seasonal_output = torch.einsum('ijk,lk->ijl', (seasonal_init, Linear_Seasonal))
+        trend_output = torch.einsum('ijk,lk->ijl', (trend_init, Linear_Trend))
+        x = seasonal_output + trend_output
+        x = x.permute(0, 2, 1)  # to [Batch, Output length, Channel]
+        return x, {'seasonal': seasonal_output, 'trend': trend_output}
 
 
 class DLinears(DLinear):
@@ -86,7 +109,7 @@ class DLinears(DLinear):
         state_paths=None,
         bias=False,
     ):
-        super(DLinears, self).__init__(seq_len, pred_len, kernel_size)
+        super().__init__(seq_len, pred_len, kernel_size)
         self.n_channel = n_channel
         self.dlinears = nn.ModuleList()
         if state_paths is None:
@@ -102,51 +125,7 @@ class DLinears(DLinear):
         return output, {}
 
 
-class DLinearSparse(DLinear):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    def __init__(
-        self,
-        seq_len,
-        pred_len,
-        kernel_size,
-        state_path=None,
-        bias=False,
-    ):
-        super(DLinearSparse, self).__init__(seq_len, pred_len, kernel_size)
-        self.seq_len = seq_len
-        self.pred_len = pred_len
-        self.decompsition = series_decomp(kernel_size)
-
-        self.not_frozen = [i for i in range(0, seq_len, pred_len)]
-        self.Linear_Seasonal = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
-        self.Linear_Trend = nn.Linear(len(self.not_frozen), self.pred_len, bias=bias)
-        if (state_path is not None) and (state_path != ''):
-            self.load_state_dict(torch.load(state_path))
-            self.eval()
-        self.to(DLinear.device)
-
-    def forward(self, x):
-        seasonal_init, trend_init = self.decompsition(x)
-        seasonal_init = seasonal_init.permute(0, 2, 1)
-        trend_init = trend_init.permute(0, 2, 1)
-
-        Linear_Seasonal = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(DLinear.device)
-        Linear_Trend = torch.zeros([self.pred_len, self.seq_len], dtype=torch.float).to(DLinear.device)
-        for i, i_nf in enumerate(self.not_frozen):
-            for j in range(self.pred_len):
-                Linear_Seasonal[j, i_nf + j] = self.Linear_Seasonal.weight[j, i]
-                Linear_Trend[j, i_nf + j] = self.Linear_Trend.weight[j, i]
-        seasonal_output = torch.einsum('ijk,lk->ijl', (seasonal_init, Linear_Seasonal))
-        trend_output = torch.einsum('ijk,lk->ijl', (trend_init, Linear_Trend))
-        x = seasonal_output + trend_output
-        x = x.permute(0, 2, 1)  # to [Batch, Output length, Channel]
-        return x, {'seasonal': seasonal_output, 'trend': trend_output}
-
-
 class DLinearSparses(DLinear):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     def __init__(
         self,
         seq_len,
@@ -155,7 +134,7 @@ class DLinearSparses(DLinear):
         n_channel,
         state_paths=None,
     ):
-        super(DLinearSparses, self).__init__(seq_len, pred_len, kernel_size)
+        super().__init__(seq_len, pred_len, kernel_size)
         self.n_channel = n_channel
         self.dlinears = nn.ModuleList()
         if state_paths is None:

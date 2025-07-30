@@ -28,7 +28,7 @@ pred_len = [24, 7]
 kernel_size = 25
 bias = true
 
-# -------------------- for train --------------------
+# -------------------- criteria --------------------
 
 [[criteria]]
 path = "torch.nn.MSELoss"

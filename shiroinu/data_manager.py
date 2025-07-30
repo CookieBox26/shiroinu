@@ -18,6 +18,7 @@ class TSDataset(Dataset):
         return torch.tensor(x, dtype=torch.float32, device=cls.device)
 
     def __init__(self, logger, df, seq_len, horizon, cols_org):
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.df = df
         self.tsta = list(self.df['timestamp'].values)
         self.tste = list(self.df['timestep'].values)
@@ -47,9 +48,8 @@ class TSDataset(Dataset):
         for col in self.df.columns:
             self.means.append(self.df[col].mean())
             self.stds.append(self.df[col].std())
-        self.reset_means_stds_for_scale()
 
-    def get_info(self):
+    def get_info_for_logger(self):
         return {
             'cols': self.df.columns,
             'cols_org': self.cols_org,
@@ -71,20 +71,15 @@ class TSDataset(Dataset):
             'stds_for_scale': self.stds_for_scale,
         }
 
-    def reset_means_stds_for_scale(self):
-        self.means_for_scale = np.zeros((1, self.n_feats))
-        self.stds_for_scale = np.ones((1, self.n_feats))
+    def set_means_stds_for_scale(self, means, stds):
+        self.means_for_scale = means
+        self.stds_for_scale = stds
+        self.means_for_scale_tensor = TSDataset.to_tensor(self.means_for_scale)
+        self.stds_for_scale_tensor = TSDataset.to_tensor(self.stds_for_scale)
 
-    def set_means_stds_for_scale(self, means=None, stds=None):
-        if means is None:
-            self.means_for_scale = np.array(self.means).reshape(1, self.n_feats)
-        else:
-            self.means_for_scale = means
-        if stds is None:
-            self.stds_for_scale = np.array(self.stds).reshape(1, self.n_feats)
-        else:
-            self.stds_for_scale = stds
-        return self.means_for_scale, self.stds_for_scale
+    def rescale(self, x):
+        return self.means_for_scale_tensor \
+            + torch.einsum('k,ijk->ijk', (self.stds_for_scale_tensor, x))
 
     def __len__(self):
         return self.n_sample

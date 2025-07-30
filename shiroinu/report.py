@@ -211,3 +211,4 @@ def report(conf_file):
 
     out_path = os.path.join(conf.log_dir, 'report.html')
     rp.output(out_path)
+    print(out_path)

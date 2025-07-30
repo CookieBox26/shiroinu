@@ -1,46 +1,34 @@
 from shiroinu.data_manager import TSDataManager
 from shiroinu.batch_sampler import BatchSampler
-from shiroinu import get_conf_and_logger, fix_seed, load_class, load_instance
+from shiroinu import get_conf_and_logger, fix_seed, load_class, load_instance, create_instance
 from shiroinu.report import report
 import torch
 import argparse
 
 
-def predict_and_backward(batch, criterion, model, optimizer):
-    optimizer.zero_grad()
-    pred, info = model(*model.extract_args(batch))
-    true = model.extract_true(batch)
-    loss = model.get_loss(pred, info, true, criterion, backward=True)
-    optimizer.step()
-    return pred, true, loss, info
-
-
-def predict_only(batch, criterion, model):
-    with torch.no_grad():
-        pred, info = model(*model.extract_args(batch))
-        true = model.extract_true(batch)
-        loss = model.get_loss(pred, info, true, criterion)
-    return pred, true, loss, info
-
-
 def run_task_train(data_loader, criterion, model, optimizer):
+    model.dataset = data_loader.dataset
     loss_total = 0.0
     for i_batch, batch in enumerate(data_loader):
-        pred, true, loss, info = predict_and_backward(batch, criterion, model, optimizer)
+        optimizer.zero_grad()
+        loss, _, _, _ = model.get_loss(batch, criterion)
+        loss.backward()
+        optimizer.step()
         loss_total += batch.tsta_future.shape[0] * loss.item()
     return loss_total / data_loader.dataset.n_sample
 
 
 def run_task_valid(data_loader, criterion, model):
+    model.dataset = data_loader.dataset
     loss_total = 0.0
-    for i_batch, batch in enumerate(data_loader):
-        pred, true, loss, info = predict_only(batch, criterion, model)
-        loss_total += batch.tsta_future.shape[0] * loss.item()
+    with torch.no_grad():
+        for i_batch, batch in enumerate(data_loader):
+            loss, _, _, _ = model.get_loss(batch, criterion)
+            loss_total += batch.tsta_future.shape[0] * loss.item()
     return loss_total / data_loader.dataset.n_sample
 
 
 def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eval):
-    logger.start_task()
     cls_optimizer = load_class(task.optimizer.path)
     optimizer = cls_optimizer(model.parameters(), **task.optimizer.params)
     lr_scheduler = None
@@ -60,8 +48,8 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
         batch_sampler=BatchSampler,
         batch_sampler_kwargs={'batch_size': batch_size_eval},
     )
-    logger.add_info('data_train', data_loader_train.dataset.get_info())
-    logger.add_info('data_valid', data_loader_valid.dataset.get_info())
+    logger.add_info('data_train', data_loader_train.dataset.get_info_for_logger())
+    logger.add_info('data_valid', data_loader_valid.dataset.get_info_for_logger())
 
     loss_valid_best = float('inf')
     early_stop_counter = 0
@@ -92,35 +80,37 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
         if stop:
             break
     # logger.save_model(model, '_last')
-    logger.end_task()
 
 
 def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
-    logger.start_task()
     data_loader = dm.get_data_loader(
         logger=logger, data_range=task.valid_range,
         data_range_for_scale=task.train_range,
         batch_sampler=BatchSampler,
         batch_sampler_kwargs={'batch_size': batch_size_eval},
     )
-    logger.add_info('data', data_loader.dataset.get_info())
+    logger.add_info('data', data_loader.dataset.get_info_for_logger())
 
     n_model = len(models)
+    pred_len = models[0].pred_len
+    for i_model in range(n_model):
+        assert models[i_model].pred_len == pred_len, 'Output length mismatch.'
+        models[i_model].dataset = data_loader.dataset
+
     data_loss_detail = [torch.empty(0, dm.n_channel)] * n_model
-    for i_batch, batch in enumerate(data_loader):
-        true = models[0].extract_true(batch)
-        if i_batch == 0:
-            logger.save_array('sample_0_true', true[0])
-            logger.save_array('sample_0_tsta', batch.tsta_future[0])
-        for i_model, model in enumerate(models):
-            with torch.no_grad():
-                pred, _ = model(*model.extract_args(batch))
-                pred = model.rescale(data_loader.dataset, pred)
+    with torch.no_grad():
+        for i_batch, batch in enumerate(data_loader):
+            true = batch.data_future[:, :pred_len]
+            if i_batch == 0:
+                logger.save_array('sample_0_true', true[0])
+                logger.save_array('sample_0_tsta', batch.tsta_future[0])
+            for i_model, model in enumerate(models):
+                pred = model.predict(batch)
                 _, _, loss_detail = criterion(pred, true)
                 loss_detail = loss_detail.detach().clone()
-            data_loss_detail[i_model] = torch.cat([data_loss_detail[i_model], loss_detail], dim=0)
-            if i_batch == 0:
-                logger.save_array(f'sample_0_model_{i_model}', pred[0])
+                data_loss_detail[i_model] = torch.cat([data_loss_detail[i_model], loss_detail], dim=0)
+                if i_batch == 0:
+                    logger.save_array(f'sample_0_model_{i_model}', pred[0])
 
     # print(data_loss_detail[i_model].size())  # n_sample, n_channel
     for i_model in range(n_model):
@@ -134,7 +124,6 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
         for i_model in range(n_model)
     ]
     logger.add_info('percentiles', percentiles)
-    logger.end_task()
 
 
 def run_tasks(conf, logger, li_skip_task_id):
@@ -149,20 +138,24 @@ def run_tasks(conf, logger, li_skip_task_id):
         if i_task in li_skip_task_id:
             logger.skip_task()
             continue
+
+        logger.start_task()
         if task.task_type == 'train':
             criterion_target = load_instance(**task.criterion_target)
             if (model is None) or task.reset_model:
                 fix_seed()
                 model_settings = conf.get_model(**task.model)
-                model = load_instance(**model_settings)
+                model = create_instance(**model_settings)
+                print(f'{model.__class__.__name__} loaded to {model.device}')
             run_task(logger, dm, criterion_target, criteria, model, task, conf.batch_size_eval)
         if task.task_type == 'eval':
             criterion_eval = load_instance(**task.criterion_eval)
             models_eval = []
             for model_ in task.models:
                 model_settings = conf.get_model(**model_)
-                models_eval.append(load_instance(**model_settings))
+                models_eval.append(create_instance(**model_settings))
             run_task_eval(logger, dm, criterion_eval, models_eval, task, conf.batch_size_eval)
+        logger.end_task()
 
 
 def run(conf_file, skip_task_ids, report_only):
