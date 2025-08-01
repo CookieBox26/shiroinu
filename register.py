@@ -9,7 +9,7 @@ def copy(target, file_0, file_1):
         open(file_1, mode='w', encoding='utf-8', newline='\n') as ofile,
     ):
         for line in ifile:
-            match = re.search(r'<img src="([^"]+)"', line)
+            match = re.search(r'<img src="((?!data:)[^"]+\.png)"', line)
             if not match:
                 ofile.write(line)
                 continue
