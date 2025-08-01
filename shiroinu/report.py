@@ -13,7 +13,16 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.size'] = 11
 
 
-def pairs_to_table(pairs):
+def _append_as_toggle(rp, toggle_id, content):
+    rp.style.set(f'#toggle-{toggle_id}', 'display', 'none')
+    rp.style.set(f'.content-{toggle_id}', 'display', 'none')
+    rp.style.set(f'#toggle-{toggle_id}:checked ~ .content-{toggle_id}', 'display', 'block')
+    rp.append(Elm('label', 'Show details').set_attr('for', f'toggle-{toggle_id}'))
+    rp.append(Elm('input').set_attr('type', 'checkbox').set_attr('id', f'toggle-{toggle_id}'))
+    rp.append(Elm('div', content).set_attr('class', f'content-{toggle_id}'))
+
+
+def _pairs_to_table(pairs):
     tbody = Elm('tbody')
     for pair in pairs:
         tbody.append(Elm('tr'))
@@ -78,19 +87,21 @@ def _report_task_train(rp, conf, i_task, info, embed_image):
     for type_ in ['train', 'valid']:
         rp.append(Elm('h3', f'data_{type_}'))
         rp.append(os.path.basename(conf.data['path']))
-        rp.append(_get_channels_df(info, f'data_{type_}').to_html())
         rp.append(_get_ranges_df(conf, info, f'data_{type_}').to_html())
+        content = _get_channels_df(info, f'data_{type_}').to_html()
+        if type_ == 'train':
+            _append_as_toggle(rp, f'toggle_task_{i_task}_data_{type_}_channels', content)
 
     rp.append(Elm('h3', 'Model and Optimizer'))
     model_settings = conf.get_model(**task.model)
     pairs = [
         ('model_path', [model_settings['path']]),
         ('model_params', [model_settings['params']])]
-    rp.append(pairs_to_table(pairs))
+    rp.append(_pairs_to_table(pairs))
     pairs = [
         (key, [getattr(task, key).path, getattr(task, key).params])
         for key in ['batch_sampler', 'optimizer', 'lr_scheduler']]
-    rp.append(pairs_to_table(pairs))
+    rp.append(_pairs_to_table(pairs))
 
     if (
         (task.criterion_target['path'] == conf.criteria[0]['path'])
@@ -175,19 +186,20 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
 
     rp.append(Elm('h3', 'data'))
     rp.append(os.path.basename(conf.data['path']))
-    rp.append(_get_channels_df(info, 'data').to_html())
     rp.append(_get_ranges_df(conf, info, 'data').to_html())
+    content = _get_channels_df(info, 'data').to_html()
+    _append_as_toggle(rp, f'toggle_task_{i_task}_data_channels', content)
 
     rp.append(Elm('h3', 'Criterion'))
     pairs = [('criterion_eval', [task.criterion_eval['path'], task.criterion_eval['params']])]
-    rp.append(pairs_to_table(pairs))
+    rp.append(_pairs_to_table(pairs))
 
     rp.append(Elm('h3', 'Models'))
     pairs = []
     for i_model in range(n_model):
         model = conf.get_model(**task.models[i_model])
         pairs.append((f'model_{i_model}', [model['path'] + '<br/>' + str(model['params'])]))
-    rp.append(pairs_to_table(pairs))
+    rp.append(_pairs_to_table(pairs))
 
     rp.append(Elm('h3', 'Loss per Sample'))
     def get_base_df():
@@ -198,10 +210,12 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
     d = {}
     for col in df_.columns:
         d[col] = '' if (col == 'cols_org') else df_[col].mean()
-    df_ = pd.concat([df_, pd.DataFrame(d, index=['mean'])])
+    df_ = pd.concat([pd.DataFrame(d, index=['mean']), df_])
     for i_model in range(1, n_model):
         df_[f'model_{i_model}-model_0'] = df_[f'model_{i_model}'] - df_[f'model_0']
-    rp.append(df_.to_html())
+    rp.append(df_.head(1).to_html())
+    content = df_.to_html()
+    _append_as_toggle(rp, f'toggle_task_{i_task}_model_{i_model}_loss', content)
 
     for i_model in range(n_model):
         rp.append(Elm('h4', f'model_{i_model}'))
@@ -212,10 +226,11 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
             pct_0 = task.percentile_points[i_pct]
             pct_1 = task.percentile_points[- (i_pct + 1)]
             df_[f'{pct_1:.0%}-{pct_0:.0%}'] = df_[f'{pct_1:.0%}'] - df_[f'{pct_0:.0%}']
-        rp.append(df_.to_html())
+        content = df_.to_html()
+        _append_as_toggle(rp, f'toggle_task_{i_task}_model_{i_model}_loss_percentiles', content)
 
     tsta = list(np.load(os.path.join(conf.log_dir, f'sample_0_tsta_task_{i_task}.npy')))
-    tsta = [tsta_.replace(':00:00', '') for tsta_ in tsta]
+    tsta = [tsta_.replace(':00', '') for tsta_ in tsta]
     true = np.load(os.path.join(conf.log_dir, f'sample_0_true_task_{i_task}.npy'))
     preds = [
         np.load(os.path.join(conf.log_dir, f'sample_0_model_{i_model}_task_{i_task}.npy'))
@@ -257,9 +272,11 @@ def report(conf_file, embed_image):
     rp = shirotsubaki.report.Report()
     rp.style.set('body', 'width', '1200px')
     rp.style.set('table', 'margin', '0.5em 0')
+    rp.style.set('label', 'cursor', 'pointer')
+    rp.style.set('label', 'color', '#016795')
+
     rp.set('title', 'Report')
     rp.append(Elm('h1', conf.out_dir_name))
-
     for i_task in range(len(conf.tasks)):
         _report_task(rp, conf, i_task, embed_image)
 
