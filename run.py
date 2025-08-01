@@ -83,6 +83,7 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
 
 
 def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data_loader = dm.get_data_loader(
         logger=logger, data_range=task.valid_range,
         data_range_for_scale=task.train_range,
@@ -97,7 +98,7 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
         assert models[i_model].pred_len == pred_len, 'Output length mismatch.'
         models[i_model].dataset = data_loader.dataset
 
-    data_loss_detail = [torch.empty(0, dm.n_channel)] * n_model
+    data_loss_detail = [torch.empty(0, dm.n_channel, device=device)] * n_model
     with torch.no_grad():
         for i_batch, batch in enumerate(data_loader):
             true = batch.data_future[:, :pred_len]
@@ -120,7 +121,9 @@ def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
     percentiles = [
         torch.quantile(
             data_loss_detail[i_model],
-            torch.tensor(task.percentile_points), dim=0).tolist()
+            torch.tensor(task.percentile_points, device=device),
+            dim=0,
+        ).tolist()
         for i_model in range(n_model)
     ]
     logger.add_info('percentiles', percentiles)
