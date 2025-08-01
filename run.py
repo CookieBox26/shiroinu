@@ -161,12 +161,12 @@ def run_tasks(conf, logger, li_skip_task_id):
         logger.end_task()
 
 
-def run(conf_file, skip_task_ids, report_only):
+def run(conf_file, skip_task_ids, report_only, embed_image):
     conf, logger = get_conf_and_logger(conf_file)
     li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
         run_tasks(conf, logger, li_skip_task_id)
-    report(conf_file)
+    report(conf_file, embed_image)
 
 
 if __name__ == '__main__':
@@ -174,5 +174,6 @@ if __name__ == '__main__':
     parser.add_argument('conf_file')
     parser.add_argument('-r', '--report_only', action='store_true')
     parser.add_argument('-s', '--skip_task_ids', type=str, default='')
+    parser.add_argument('-e', '--embed_image', action='store_true')
     args = parser.parse_args()
-    run(args.conf_file, args.skip_task_ids, args.report_only)
+    run(args.conf_file, args.skip_task_ids, args.report_only, args.embed_image)

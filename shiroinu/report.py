@@ -72,7 +72,7 @@ def _get_ranges_df(conf, info, key):
         'Start of Prediction Window', 'End of Prediction Window']).T
 
 
-def _report_task_train(rp, conf, i_task, info):
+def _report_task_train(rp, conf, i_task, info, embed_image):
     task = conf.tasks[i_task]
 
     for type_ in ['train', 'valid']:
@@ -99,15 +99,15 @@ def _report_task_train(rp, conf, i_task, info):
         _plot_loss_graph(
             info, ['loss_0_per_sample_train', 'loss_0_per_sample_valid'],
             task.criterion_target['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train_valid.png')
+        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train_valid.png', embed_image)
     else:
         _plot_loss_graph(info, ['loss_0_per_sample_train'], task.criterion_target['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train.png')
+        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train.png', embed_image)
         _plot_loss_graph(info, ['loss_0_per_sample_valid'], conf.criteria[0]['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_0_valid.png')
+        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_0_valid.png', embed_image)
     for i_crit in range(1, len(conf.criteria)):
         _plot_loss_graph(info, [f'loss_{i_crit}_per_sample_valid'], conf.criteria[i_crit]['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_{i_crit}_valid.png')
+        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_{i_crit}_valid.png', embed_image)
 
     rp.append(pd.DataFrame({
         'epoch_id_best': [info['epoch_id_best']],
@@ -143,7 +143,10 @@ def _plot_prediction(
     ax.legend(desc.values(), desc.keys(), loc='upper left', bbox_to_anchor=(1.01, 1))
 
 
-def _plot_predictions(rp, n_model, true, preds, tsta, info, output_path, prefix, diff=False):
+def _plot_predictions(
+    rp, n_model, true, preds, tsta, info, output_path, prefix,
+    diff=False, embed_image=False,
+):
     pred_len, n_channel = true.shape
     x = list(range(pred_len))
     for i_graph, i_channel_0 in enumerate(range(0, n_channel, 5)):
@@ -160,13 +163,13 @@ def _plot_predictions(rp, n_model, true, preds, tsta, info, output_path, prefix,
                     diff=diff, show_xticklabels=(i_ax == n_channel_ - 1),
                 )
             plt.subplots_adjust(hspace=0.1)
-        _add_picture(output_path, rp, f'{prefix}_{i_channel_0}.png')
+        _add_picture(output_path, rp, f'{prefix}_{i_channel_0}.png', embed_image)
         rp.append('<br/>')
         if i_graph == 4:
             break
 
 
-def _report_task_eval(rp, conf, i_task, info):
+def _report_task_eval(rp, conf, i_task, info, embed_image):
     task = conf.tasks[i_task]
     n_model = len(task.models)
 
@@ -220,12 +223,15 @@ def _report_task_eval(rp, conf, i_task, info):
     ]
 
     rp.append(Elm('h3', 'Prediction Plot'))
-    _plot_predictions(rp, n_model, true, preds, tsta, info, conf.log_dir, f'task_{i_task}_pred')
+    _plot_predictions(
+        rp, n_model, true, preds, tsta, info, conf.log_dir,
+        f'task_{i_task}_pred', embed_image=embed_image,
+    )
 
     rp.append(Elm('h3', 'Prediction Plot (Diff)'))
     _plot_predictions(
         rp, n_model, true, preds, tsta, info, conf.log_dir,
-        f'task_{i_task}_pred_diff', diff=True,
+        f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image,
     )
 
     #for i, key_loss in enumerate(li_key_loss):
@@ -234,18 +240,18 @@ def _report_task_eval(rp, conf, i_task, info):
     #ax.set_ylabel(ylabel)
 
 
-def _report_task(rp, conf, i_task):
+def _report_task(rp, conf, i_task, embed_image):
     task = conf.tasks[i_task]
     log_path = os.path.join(conf.log_dir, f'info_task_{i_task}.toml')
     info = None if (not os.path.isfile(log_path)) else toml.load(log_path)
     rp.append(Elm('h2', f'task_{i_task} ({task.task_type})'))
     if task.task_type == 'train':
-        _report_task_train(rp, conf, i_task, info)
+        _report_task_train(rp, conf, i_task, info, embed_image)
     elif task.task_type == 'eval':
-        _report_task_eval(rp, conf, i_task, info)
+        _report_task_eval(rp, conf, i_task, info, embed_image)
 
 
-def report(conf_file):
+def report(conf_file, embed_image):
     conf = Config.from_conf_file(conf_file)
 
     rp = shirotsubaki.report.Report()
@@ -255,7 +261,7 @@ def report(conf_file):
     rp.append(Elm('h1', conf.out_dir_name))
 
     for i_task in range(len(conf.tasks)):
-        _report_task(rp, conf, i_task)
+        _report_task(rp, conf, i_task, embed_image)
 
     out_path = os.path.join(conf.log_dir, 'report.html')
     rp.output(out_path)
