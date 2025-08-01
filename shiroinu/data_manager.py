@@ -128,8 +128,14 @@ class TSDataset(Dataset):
 
 class TSDataManager:
     def __init__(
-        self, path, colname_timestamp, white_list, step_start, step_width,
-        seq_len, pred_len,
+        self,
+        path,
+        colname_timestamp,
+        white_list,
+        seq_len,
+        pred_len,
+        step_start=0,
+        step_width=1,
     ):
         self.path = path
         self.colname_timestamp = colname_timestamp

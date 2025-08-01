@@ -73,4 +73,7 @@ class Config:
     @staticmethod
     def from_conf_file(conf_file):
         d = toml.load(conf_file)
+        if d['out_dir_name'] == '<CONF_FILE_NAME>':
+            out_dir_name, _ = os.path.splitext(os.path.basename(conf_file))
+            d['out_dir_name'] = out_dir_name
         return Config(d)

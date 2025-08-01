@@ -35,6 +35,7 @@ def _add_picture(output_path, rp, filename, emb=False):
         img_dir = os.path.join(output_path, 'img/')
         os.makedirs(img_dir, exist_ok=True)
         plt.savefig(f'{img_dir}{filename}', **kwargs)
+        plt.close()
         rp.append(f'<img src="img/{filename}"/>\n')
 
 
@@ -114,6 +115,57 @@ def _report_task_train(rp, conf, i_task, info):
     }).to_html(index=False))
 
 
+def _plot_prediction(
+    ax, n_model, x, true, preds, i_channel, tsta, info,
+    xtick_step=12, show_xticklabels=True, diff=False,
+):
+    colname = info['data']['cols'][i_channel]
+    colname_org = info['data']['cols_org'][i_channel]
+
+    desc = OrderedDict()
+    li_true = [y_[i_channel] for y_ in true]
+    if diff:
+        desc['true'] = ax.plot(x, [0.0 for _ in true])[0]        
+    else:
+        desc['true'] = ax.plot(x, li_true)[0]
+    for i_model in range(n_model):
+        li_pred = [y_[i_channel] for y_ in preds[i_model]]
+        if diff:
+            li_pred = [y_1 - y_0 for y_0, y_1 in zip(li_true, li_pred)]
+        desc[f'model_{i_model}'] = ax.plot(x, li_pred)[0]
+    ax.set_xticks(x[::xtick_step])
+    if show_xticklabels:
+        ax.set_xticklabels(tsta[::xtick_step], rotation=90, fontsize=11)
+    else:
+        ax.tick_params(labelbottom=False)
+    ax.set_ylabel(f'{colname} ({colname_org})')
+    ax.grid(axis='both', linestyle='dotted', linewidth=1)
+    ax.legend(desc.values(), desc.keys(), loc='upper left', bbox_to_anchor=(1.01, 1))
+
+
+def _plot_predictions(rp, n_model, true, preds, tsta, info, output_path, prefix, diff=False):
+    pred_len, n_channel = true.shape
+    x = list(range(pred_len))
+    for i_graph, i_channel_0 in enumerate(range(0, n_channel, 5)):
+        li_i_channel = list(range(i_channel_0, n_channel))[:5]
+        n_channel_ = len(li_i_channel)
+        if n_channel_ == 1:
+            fig, ax = plt.subplots(nrows=1, figsize=(7.5, 1.5))
+            _plot_prediction(ax, n_model, x, true, preds, i_channel_0, tsta, info, diff=diff)
+        else:
+            fig, ax = plt.subplots(nrows=n_channel_, figsize=(7.5, 1.5 * n_channel_))
+            for i_ax, i_channel in enumerate(li_i_channel):
+                _plot_prediction(
+                    ax[i_ax], n_model, x, true, preds, i_channel, tsta, info,
+                    diff=diff, show_xticklabels=(i_ax == n_channel_ - 1),
+                )
+            plt.subplots_adjust(hspace=0.1)
+        _add_picture(output_path, rp, f'{prefix}_{i_channel_0}.png')
+        rp.append('<br/>')
+        if i_graph == 4:
+            break
+
+
 def _report_task_eval(rp, conf, i_task, info):
     task = conf.tasks[i_task]
     n_model = len(task.models)
@@ -166,20 +218,16 @@ def _report_task_eval(rp, conf, i_task, info):
         np.load(os.path.join(conf.log_dir, f'sample_0_model_{i_model}_task_{i_task}.npy'))
         for i_model in range(n_model)
     ]
-    pred_len, n_channel = true.shape
-    for i_channel in range(n_channel):
-        desc = OrderedDict()
-        fig, ax = plt.subplots(nrows=1, figsize=(8, 2))
-        x = list(range(pred_len))
-        desc['true'] = ax.plot(x, [y_[i_channel] for y_ in true])[0]
-        for i_model in range(n_model):
-            desc[f'model_{i_model}'] = ax.plot(x, [y_[i_channel] for y_ in preds[i_model]])[0]
-        ax.set_xticks(x[::12])
-        ax.set_xticklabels(tsta[::12], rotation=90, fontsize=11)
-        ax.grid(axis='both', linestyle='dotted', linewidth=1)
-        ax.legend(desc.values(), desc.keys(), loc='upper left', bbox_to_anchor=(1.05, 1))
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_ts_{i_channel}.png')
-        rp.append('<br/>')
+
+    rp.append(Elm('h3', 'Prediction Plot'))
+    _plot_predictions(rp, n_model, true, preds, tsta, info, conf.log_dir, f'task_{i_task}_pred')
+
+    rp.append(Elm('h3', 'Prediction Plot (Diff)'))
+    _plot_predictions(
+        rp, n_model, true, preds, tsta, info, conf.log_dir,
+        f'task_{i_task}_pred_diff', diff=True,
+    )
+
     #for i, key_loss in enumerate(li_key_loss):
     #    desc[key_loss] = ax.plot(x, li_loss[i])[0]
     #ax.set_xlabel('i_epoch')

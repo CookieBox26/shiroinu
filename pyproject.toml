@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shiroinu"
+version = "0.0.1"
+description = "I love dogs."
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+authors = [{name="CookieBox26", email="cookie-box@cookie-box.info"}]
+dependencies = [
+    "toml",
+    "numpy>=1.26.0,<2.0.0",
+    "torch==2.6.0+cu124; sys_platform == 'linux'",
+    "torch==2.6.0; sys_platform == 'win32'",
+    "pandas",
+    "shirotsubaki>=0.0.1a2",
+    "matplotlib",
+]
+
+[[tool.uv.index]]
+name = "torch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "torch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    {index="torch-cuda", marker="sys_platform=='linux'"},
+    {index="torch-cpu", marker="sys_platform=='win32'"},
+]
