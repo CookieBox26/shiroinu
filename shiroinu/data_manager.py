@@ -131,9 +131,9 @@ class TSDataManager:
         self,
         path,
         colname_timestamp,
-        white_list,
         seq_len,
         pred_len,
+        white_list=None,
         step_start=0,
         step_width=1,
     ):
