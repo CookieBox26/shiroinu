@@ -1,9 +1,16 @@
 import torch
+from abc import ABC
 
 
-class MSELoss(torch.nn.Module):
+class BaseLoss(torch.nn.Module, ABC):
+    def __init__(self):
+        super().__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
+class MSELoss(BaseLoss):
     def set_w_channel(self, n_channel):
-        self.w_channel = torch.ones(n_channel, dtype=torch.float)
+        self.w_channel = torch.ones(n_channel, dtype=torch.float, device=self.device)
         self.w_channel /= self.w_channel.sum()
     def __init__(self, n_channel=0):
         super().__init__()
@@ -32,10 +39,10 @@ class MAELoss(MSELoss):
         return torch.abs(pred - true)
 
 
-class ExceedanceRate(torch.nn.Module):
+class ExceedanceRate(BaseLoss):
     def __init__(self, n_channel, threshold=0.01):
         super().__init__()
-        self.w_channel = torch.ones(n_channel, dtype=torch.float)
+        self.w_channel = torch.ones(n_channel, dtype=torch.float, device=self.device)
         self.w_channel /= self.w_channel.sum()
         self.threshold = threshold
     def forward(self, pred, true):
@@ -45,10 +52,10 @@ class ExceedanceRate(torch.nn.Module):
         return torch.einsum('j,ij->ij', (self.w_channel, er)), er.detach().clone()
 
 
-class DiffLoss(torch.nn.Module):
+class DiffLoss(BaseLoss):
     def __init__(self, n_channel, threshold=0.005):
         super().__init__()
-        self.w_channel = torch.ones(n_channel, dtype=torch.float)
+        self.w_channel = torch.ones(n_channel, dtype=torch.float, device=self.device)
         self.w_channel /= self.w_channel.sum()
         self.threshold = threshold
     def forward(self, pred, true):
