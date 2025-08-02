@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 
 
 class BaseModel(nn.Module, ABC):
+    data_based_hyperparams = ['mean_', 'std_']
+
     def __init__(self):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

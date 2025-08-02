@@ -39,6 +39,12 @@ def load_instance(path, params):
     return model_class(**params)
 
 
-def create_instance(path, params):
+def create_instance(path, params, dataset):
     model_class = load_class(path)
+
+    if 'means_' in model_class.data_based_hyperparams:
+        params['means_'] = dataset.means
+    if 'stds_' in model_class.data_based_hyperparams:
+        params['stds_'] = dataset.stds
+
     return model_class.create(**params)

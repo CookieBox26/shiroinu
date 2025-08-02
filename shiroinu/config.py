@@ -49,6 +49,8 @@ class Config:
         return model_
 
     def __init__(self, d):
+        self.criteria = []
+
         fields = [
             'out_dir_name', 'batch_size_eval', 'data',
             'criteria', 'models', 'tasks',

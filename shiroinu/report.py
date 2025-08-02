@@ -19,7 +19,30 @@ def _append_as_toggle(rp, toggle_id, content):
     rp.style.set(f'#toggle-{toggle_id}:checked ~ .content-{toggle_id}', 'display', 'block')
     rp.append(Elm('label', 'Show details').set_attr('for', f'toggle-{toggle_id}'))
     rp.append(Elm('input').set_attr('type', 'checkbox').set_attr('id', f'toggle-{toggle_id}'))
-    rp.append(Elm('div', content).set_attr('class', f'content-{toggle_id}'))
+    rp.append(Elm('div', content).set_attr('class', f'toggle-area content-{toggle_id}'))
+
+
+def _append_as_tabs(rp, tabs_id, contents):
+    rp.style.set(', '.join([
+        f'#{tabs_id}-btn{i_tab:04d}:checked ~ #{tabs_id}-content{i_tab:04d}'
+        for i_tab in range(len(contents))
+    ]), 'display', 'block')
+    rp.style.set(', '.join([
+        f':has(#{tabs_id}-btn{i_tab:04d}:checked) label[for="{tabs_id}-btn{i_tab:04d}"]'
+        for i_tab in range(len(contents))
+    ]), 'background', '#c9c9c9')
+    for i_tab, tab_name in enumerate(contents.keys()):
+        id_ = f'{tabs_id}-btn{i_tab:04d}'
+        checked = 'checked' if (i_tab == 0) else ''
+        label = Elm('label', tab_name).set_attr('class', 'tabbtn')
+        label.set_attr('for', id_)
+        rp.append(label)
+        rp.append(f'<input type="radio" name="{tabs_id}" id="{id_}" hidden {checked}/>')
+        if (i_tab + 1) % 20 == 0:
+            rp.append('<br/>')
+    for i_tab, content in enumerate(contents.values()):
+        id_ = f'{tabs_id}-content{i_tab:04d}'
+        rp.append(Elm('div', content).set_attr('id', id_).set_attr('class', 'tab-content'))
 
 
 def _pairs_to_table(pairs):
@@ -32,20 +55,21 @@ def _pairs_to_table(pairs):
     return Elm('table', tbody).set_attr('border', '1')
 
 
-def _add_picture(output_path, rp, filename, emb=False):
+def _to_picture(output_path, filename, emb=False):
     kwargs = {'format': 'png', 'bbox_inches': 'tight'}
     if emb:
         pic_io_bytes = io.BytesIO()
         plt.savefig(pic_io_bytes, **kwargs)
         pic_io_bytes.seek(0)
         base64_img = base64.b64encode(pic_io_bytes.read()).decode('utf8')
-        rp.append(f'<img src="data:image/png;base64, {base64_img}"/>\n')
+        src = f'data:image/png;base64, {base64_img}'
     else:
         img_dir = os.path.join(output_path, 'img/')
         os.makedirs(img_dir, exist_ok=True)
         plt.savefig(f'{img_dir}{filename}', **kwargs)
-        plt.close()
-        rp.append(f'<img src="img/{filename}"/>\n')
+        src = f'img/{filename}'
+    plt.close()
+    return f'<img src="{src}"/>'
 
 
 def _plot_loss_graph(info, li_key_loss, ylabel):
@@ -64,8 +88,8 @@ def _plot_loss_graph(info, li_key_loss, ylabel):
 def _get_channels_df(info, key):
     return pd.DataFrame({
         'cols_org': info[key]['cols_org'],
-        'means_for_scale': info[key]['means_for_scale'],
-        'stds_for_scale': info[key]['stds_for_scale'],
+        'means': info[key]['means'],
+        'stds': info[key]['stds'],
     }, index=info[key]['cols'])
 
 
@@ -86,7 +110,8 @@ def _report_task_train(rp, conf, i_task, info, embed_image):
 
     for type_ in ['train', 'valid']:
         rp.append(Elm('h3', f'data_{type_}'))
-        rp.append(os.path.basename(conf.data['path']))
+        path = conf.data['path'].replace(os.path.expanduser('~/'), '~/')
+        rp.append(_pairs_to_table([('path', [path])]))
         rp.append(_get_ranges_df(conf, info, f'data_{type_}').to_html())
         content = _get_channels_df(info, f'data_{type_}').to_html()
         if type_ == 'train':
@@ -110,15 +135,15 @@ def _report_task_train(rp, conf, i_task, info, embed_image):
         _plot_loss_graph(
             info, ['loss_0_per_sample_train', 'loss_0_per_sample_valid'],
             task.criterion_target['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train_valid.png', embed_image)
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train_valid.png', embed_image))
     else:
         _plot_loss_graph(info, ['loss_0_per_sample_train'], task.criterion_target['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_train.png', embed_image)
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train.png', embed_image))
         _plot_loss_graph(info, ['loss_0_per_sample_valid'], conf.criteria[0]['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_0_valid.png', embed_image)
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_0_valid.png', embed_image))
     for i_crit in range(1, len(conf.criteria)):
         _plot_loss_graph(info, [f'loss_{i_crit}_per_sample_valid'], conf.criteria[i_crit]['path'])
-        _add_picture(conf.log_dir, rp, f'task_{i_task}_loss_{i_crit}_valid.png', embed_image)
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_{i_crit}_valid.png', embed_image))
 
     rp.append(pd.DataFrame({
         'epoch_id_best': [info['epoch_id_best']],
@@ -160,6 +185,7 @@ def _plot_predictions(
 ):
     pred_len, n_channel = true.shape
     x = list(range(pred_len))
+    contents = {}
     for i_graph, i_channel_0 in enumerate(range(0, n_channel, 5)):
         li_i_channel = list(range(i_channel_0, n_channel))[:5]
         n_channel_ = len(li_i_channel)
@@ -174,10 +200,11 @@ def _plot_predictions(
                     diff=diff, show_xticklabels=(i_ax == n_channel_ - 1),
                 )
             plt.subplots_adjust(hspace=0.1)
-        _add_picture(output_path, rp, f'{prefix}_{i_channel_0}.png', embed_image)
-        rp.append('<br/>')
-        if i_graph == 4:
+        contents[f'y{i_channel_0}-'] = \
+            _to_picture(output_path, f'{prefix}_{i_channel_0}.png', embed_image)
+        if i_graph == 20:
             break
+    _append_as_tabs(rp, prefix, contents)
 
 
 def _report_task_eval(rp, conf, i_task, info, embed_image):
@@ -185,7 +212,8 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
     n_model = len(task.models)
 
     rp.append(Elm('h3', 'data'))
-    rp.append(os.path.basename(conf.data['path']))
+    path = conf.data['path'].replace(os.path.expanduser('~/'), '~/')
+    rp.append(_pairs_to_table([('path', [path])]))
     rp.append(_get_ranges_df(conf, info, 'data').to_html())
     content = _get_channels_df(info, 'data').to_html()
     _append_as_toggle(rp, f'toggle_task_{i_task}_data_channels', content)
@@ -268,14 +296,26 @@ def _report_task(rp, conf, i_task, embed_image):
 
 def report(conf_file, embed_image):
     conf = Config.from_conf_file(conf_file)
+    print('Embed image in report' if embed_image else 'Output image file separately')
 
     rp = shirotsubaki.report.Report()
-    rp.style.set('body', 'width', '1200px')
-    rp.style.set('table', 'margin', '0.5em 0')
+    rp.style.set('body', 'min-width', '1200px')
+    rp.style.set('table', 'margin-bottom', '0.5em')
+
     rp.style.set('label', 'cursor', 'pointer')
     rp.style.set('label', 'color', '#016795')
+    rp.style.set('.toggle-area', 'background', '#f0f0f0')
+    rp.style.set('.toggle-area', 'padding', '1em')
+    rp.style.set('.tab-content', 'display', 'none')
+    rp.style.set('label.tabbtn', 'color', '#303030')
+    rp.style.set('label.tabbtn', 'border', '1px solid #303030')
+    rp.style.set('label.tabbtn', 'padding', '0.2em 0.4em')
+    rp.style.set('label.tabbtn', 'margin-bottom', '0.4em')
+    rp.style.set('label.tabbtn', 'background', '#f0f0f0')
+    rp.style.set('label.tabbtn', 'display', 'inline-block')
+    rp.style.set('label.tabbtn', 'user-select', 'none')
 
-    rp.set('title', 'Report')
+    rp.set('title', conf.out_dir_name)
     rp.append(Elm('h1', conf.out_dir_name))
     for i_task in range(len(conf.tasks)):
         _report_task(rp, conf, i_task, embed_image)

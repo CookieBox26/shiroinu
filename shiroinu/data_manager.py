@@ -8,8 +8,8 @@ import gc
 
 class TSDataset(Dataset):
     TSBatch = collections.namedtuple('TSBatch', [
-        'tsta', 'tste', 'data', 'datass',
-        'tsta_future', 'tste_future', 'data_future', 'datass_future',
+        'tsta', 'tste', 'data',
+        'tsta_future', 'tste_future', 'data_future',
     ])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -67,19 +67,9 @@ class TSDataset(Dataset):
                 self.tsta[self.n_sample - 1 + self.seq_len],
                 self.tsta[self.n_sample - 1 + self.seq_len + self.horizon - 1],
             ],
-            'means_for_scale': self.means_for_scale,
-            'stds_for_scale': self.stds_for_scale,
+            'means': self.means,
+            'stds': self.stds,
         }
-
-    def set_means_stds_for_scale(self, means, stds):
-        self.means_for_scale = means
-        self.stds_for_scale = stds
-        self.means_for_scale_tensor = TSDataset.to_tensor(self.means_for_scale)
-        self.stds_for_scale_tensor = TSDataset.to_tensor(self.stds_for_scale)
-
-    def rescale(self, x):
-        return self.means_for_scale_tensor \
-            + torch.einsum('k,ijk->ijk', (self.stds_for_scale_tensor, x))
 
     def __len__(self):
         return self.n_sample
@@ -89,32 +79,29 @@ class TSDataset(Dataset):
         # idx + seq_len - 1 :  End of the reference window (current time) (= idx_1 - 1)
         # idx + seq_len - 1 + 1 :  Start of the prediction window (= idx_1)
         # idx + seq_len - 1 + horizon :  End of the prediction window
+
         idx_1 = idx + self.seq_len
         idx_2 = idx + self.seq_len + self.horizon
 
         tsta = self.tsta[idx:idx_1]
         tste = self.tste[idx:idx_1]
         data = self.df.iloc[idx:idx_1, :].values
-        datass = (self.df.iloc[idx:idx_1, :].values - self.means_for_scale) / self.stds_for_scale
 
         tsta_future = self.tsta[idx_1:idx_2]
         tste_future = self.tste[idx_1:idx_2]
         data_future = self.df.iloc[idx_1:idx_2, :].values
-        datass_future = (self.df.iloc[idx_1:idx_2, :].values - self.means_for_scale) / self.stds_for_scale
 
-        return TSDataset.TSBatch(tsta, tste, data, datass, tsta_future, tste_future, data_future, datass_future)
+        return TSDataset.TSBatch(tsta, tste, data, tsta_future, tste_future, data_future)
 
     @staticmethod
     def collate_fn(batch):
         tsta = np.array([v[0] for v in batch])  # batch_size, seq_len
         tste = TSDataset.to_tensor(np.array([v[1] for v in batch]))  # batch_size, seq_len
         data = TSDataset.to_tensor(np.array([v[2] for v in batch]))  # batch_size, seq_len, num_of_roads
-        datass = TSDataset.to_tensor(np.array([v[3] for v in batch]))  # batch_size, seq_len, num_of_roads
-        tsta_future = np.array([v[4] for v in batch])  # batch_size, pred_len
-        tste_future = TSDataset.to_tensor(np.array([v[5] for v in batch]))  # batch_size, pred_len
-        data_future = TSDataset.to_tensor(np.array([v[6] for v in batch]))  # batch_size, pred_len, num_of_roads
-        datass_future = TSDataset.to_tensor(np.array([v[7] for v in batch]))  # batch_size, pred_len, num_of_roads
-        return TSDataset.TSBatch(tsta, tste, data, datass, tsta_future, tste_future, data_future, datass_future)
+        tsta_future = np.array([v[3] for v in batch])  # batch_size, pred_len
+        tste_future = TSDataset.to_tensor(np.array([v[4] for v in batch]))  # batch_size, pred_len
+        data_future = TSDataset.to_tensor(np.array([v[5] for v in batch]))  # batch_size, pred_len, num_of_roads
+        return TSDataset.TSBatch(tsta, tste, data, tsta_future, tste_future, data_future)
 
     @staticmethod
     def debug_print_batch(batch):
@@ -182,7 +169,6 @@ class TSDataManager:
         self,
         logger,
         data_range,
-        data_range_for_scale,
         batch_sampler,
         batch_sampler_kwargs,
     ):
@@ -190,9 +176,6 @@ class TSDataManager:
             return None
 
         dataset = self.get_dataset(logger, data_range)
-        dataset_for_scale = self.get_dataset(None, data_range_for_scale)
-        means, stds = dataset_for_scale.means, dataset_for_scale.stds
-        dataset.set_means_stds_for_scale(means, stds)
         gc.collect()
 
         kwargs = batch_sampler.filter_kwargs(batch_sampler_kwargs)

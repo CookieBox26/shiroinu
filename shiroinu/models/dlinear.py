@@ -1,5 +1,6 @@
 from shiroinu.models.base_model import BaseModel
 from shiroinu.models.simple_average import SimpleAverage
+from shiroinu.scaler import StandardScaler
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,12 +28,16 @@ class series_decomp(nn.Module):
 
 
 class DLinear(BaseModel):
+    data_based_hyperparams = ['means_', 'stds_']
+
     def __init__(
         self,
         seq_len,
         pred_len,
         kernel_size,
-        bias=False,
+        bias,
+        means_,
+        stds_,
     ):
         super().__init__()
         self.seq_len = seq_len
@@ -40,6 +45,7 @@ class DLinear(BaseModel):
         self.decompsition = series_decomp(kernel_size)
         self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len, bias=bias)
+        self.scaler = StandardScaler(means_, stds_)
 
     def forward(self, x):
         seasonal_init, trend_init = self.decompsition(x)
@@ -52,43 +58,41 @@ class DLinear(BaseModel):
         return x, {'seasonal': seasonal_output, 'trend': trend_output}
 
     def extract_input(self, batch):
-        return batch.datass[:, -self.seq_len:, :]
+        return self.scaler.scale(batch.data[:, -self.seq_len:, :])
 
     def extract_target(self, batch):
-        return batch.datass_future[:, :self.pred_len]
+        return self.scaler.scale(batch.data_future[:, :self.pred_len])
 
     def predict(self, batch):
         input = self.extract_input(batch)
         output, _ = self(input)
-        return self.dataset.rescale(output)
+        return self.scaler.rescale(output)
 
 
 class DLinearRes(DLinear):
     """Take the difference from the naive forecast
     """
-    def __init__(self, seq_len, pred_len, kernel_size, period_len, bias=False):
-        super().__init__(seq_len, pred_len, kernel_size, bias)
+    def __init__(self, seq_len, pred_len, kernel_size, period_len, bias, means_, stds_):
+        super().__init__(seq_len, pred_len, kernel_size, bias, means_, stds_)
         self.baseline = SimpleAverage.create(**{
-            'seq_len': seq_len,
-            'pred_len': pred_len,
-            'period_len': period_len,
+            'seq_len': seq_len, 'pred_len': pred_len, 'period_len': period_len,
         })
 
     def extract_input(self, batch):
-        input_ = batch.datass[:, -self.seq_len:, :]
+        input_ = self.scaler.scale(batch.data[:, -self.seq_len:, :])
         naive = self.baseline(input_)
         return input_ - naive.repeat(1, int(self.seq_len / self.baseline.period_len), 1)
 
     def extract_target(self, batch):
-        naive = self.baseline(batch.datass[:, -self.seq_len:, :])
-        target = batch.datass_future[:, :self.pred_len]
+        naive = self.baseline(self.scaler.scale(batch.data[:, -self.seq_len:, :]))
+        target = self.scaler.scale(batch.data_future[:, :self.pred_len])
         return target - naive
 
     def predict(self, batch):
-        naive = self.baseline(batch.datass[:, -self.seq_len:, :])
+        naive = self.baseline(self.scaler.scale(batch.data[:, -self.seq_len:, :]))
         input = self.extract_input(batch)
         output, _ = self(input)
-        return self.dataset.rescale(naive + output)
+        return self.scaler.rescale(naive + output)
 
 
 class DLinearSparse(DLinear):

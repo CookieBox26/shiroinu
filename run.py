@@ -7,7 +7,6 @@ import argparse
 
 
 def run_task_train(data_loader, criterion, model, optimizer):
-    model.dataset = data_loader.dataset
     loss_total = 0.0
     for i_batch, batch in enumerate(data_loader):
         optimizer.zero_grad()
@@ -19,7 +18,6 @@ def run_task_train(data_loader, criterion, model, optimizer):
 
 
 def run_task_valid(data_loader, criterion, model):
-    model.dataset = data_loader.dataset
     loss_total = 0.0
     with torch.no_grad():
         for i_batch, batch in enumerate(data_loader):
@@ -28,28 +26,37 @@ def run_task_valid(data_loader, criterion, model):
     return loss_total / data_loader.dataset.n_sample
 
 
-def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eval):
+def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
+    data_loader_train = dm.get_data_loader(
+        logger=logger,
+        data_range=task.train_range,
+        batch_sampler=load_class(task.batch_sampler.path),
+        batch_sampler_kwargs=task.batch_sampler.params,
+    )
+    data_loader_valid = dm.get_data_loader(
+        logger=logger,
+        data_range=task.valid_range,
+        batch_sampler=BatchSampler,
+        batch_sampler_kwargs={'batch_size': batch_size_eval},
+    )
+    logger.add_info('data_train', data_loader_train.dataset.get_info_for_logger())
+    logger.add_info('data_valid', data_loader_valid.dataset.get_info_for_logger())
+
+    if (model is None) or task.reset_model:
+        fix_seed()
+        model_settings = conf.get_model(**task.model)
+        model = create_instance(dataset=data_loader_train.dataset, **model_settings)
+        print(
+            f'{model.__class__.__name__}({model.count_trainable_parameters()}) '
+            f'loaded to {model.device}'
+        )
+    criterion_target = load_instance(**task.criterion_target)
     cls_optimizer = load_class(task.optimizer.path)
     optimizer = cls_optimizer(model.parameters(), **task.optimizer.params)
     lr_scheduler = None
     if task.lr_scheduler.path != '':
         cls_lr_scheduler = load_class(task.lr_scheduler.path)
         lr_scheduler = cls_lr_scheduler(optimizer, **task.lr_scheduler.params)
-
-    data_loader_train = dm.get_data_loader(
-        logger=logger, data_range=task.train_range,
-        data_range_for_scale=task.train_range,
-        batch_sampler=load_class(task.batch_sampler.path),
-        batch_sampler_kwargs=task.batch_sampler.params,
-    )
-    data_loader_valid = dm.get_data_loader(
-        logger=logger, data_range=task.valid_range,
-        data_range_for_scale=task.train_range,
-        batch_sampler=BatchSampler,
-        batch_sampler_kwargs={'batch_size': batch_size_eval},
-    )
-    logger.add_info('data_train', data_loader_train.dataset.get_info_for_logger())
-    logger.add_info('data_valid', data_loader_valid.dataset.get_info_for_logger())
 
     loss_valid_best = float('inf')
     early_stop_counter = 0
@@ -80,23 +87,29 @@ def run_task(logger, dm, criterion_target, criteria, model, task, batch_size_eva
         if stop:
             break
     # logger.save_model(model, '_last')
+    return model
 
 
-def run_task_eval(logger, dm, criterion, models, task, batch_size_eval):
+def run_task_eval(conf, logger, dm, task, batch_size_eval):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data_loader = dm.get_data_loader(
-        logger=logger, data_range=task.valid_range,
-        data_range_for_scale=task.train_range,
+        logger=logger,
+        data_range=task.valid_range,
         batch_sampler=BatchSampler,
         batch_sampler_kwargs={'batch_size': batch_size_eval},
     )
     logger.add_info('data', data_loader.dataset.get_info_for_logger())
 
+    models = []
+    for model_ in task.models:
+        model_settings = conf.get_model(**model_)
+        models.append(create_instance(dataset=data_loader.dataset, **model_settings))
+    criterion = load_instance(**task.criterion_eval)
+
     n_model = len(models)
     pred_len = models[0].pred_len
     for i_model in range(n_model):
         assert models[i_model].pred_len == pred_len, 'Output length mismatch.'
-        models[i_model].dataset = data_loader.dataset
 
     data_loss_detail = [torch.empty(0, dm.n_channel, device=device)] * n_model
     with torch.no_grad():
@@ -144,39 +157,33 @@ def run_tasks(conf, logger, li_skip_task_id):
 
         logger.start_task()
         if task.task_type == 'train':
-            criterion_target = load_instance(**task.criterion_target)
-            if (model is None) or task.reset_model:
-                fix_seed()
-                model_settings = conf.get_model(**task.model)
-                model = create_instance(**model_settings)
-                print(
-                    f'{model.__class__.__name__}({model.count_trainable_parameters()}) '
-                    f'loaded to {model.device}'
-                )
-            run_task(logger, dm, criterion_target, criteria, model, task, conf.batch_size_eval)
+            model = run_task(conf, logger, dm, criteria, model, task, conf.batch_size_eval)
         if task.task_type == 'eval':
-            criterion_eval = load_instance(**task.criterion_eval)
-            models_eval = []
-            for model_ in task.models:
-                model_settings = conf.get_model(**model_)
-                models_eval.append(create_instance(**model_settings))
-            run_task_eval(logger, dm, criterion_eval, models_eval, task, conf.batch_size_eval)
+            run_task_eval(conf, logger, dm, task, conf.batch_size_eval)
         logger.end_task()
 
 
-def run(conf_file, skip_task_ids, report_only, embed_image):
+def run(conf_file, skip_task_ids, report_only, quiet, separate_image):
     conf, logger = get_conf_and_logger(conf_file)
+    logger.print_epoch = (not quiet)
     li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
         run_tasks(conf, logger, li_skip_task_id)
-    report(conf_file, embed_image)
+    report(conf_file, (not separate_image))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('conf_file')
-    parser.add_argument('-r', '--report_only', action='store_true')
     parser.add_argument('-s', '--skip_task_ids', type=str, default='')
-    parser.add_argument('-e', '--embed_image', action='store_true')
+    parser.add_argument('-r', '--report_only', action='store_true')
+    parser.add_argument('-q', '--quiet', action='store_true')
+    parser.add_argument('-i', '--separate_image', action='store_true')
     args = parser.parse_args()
-    run(args.conf_file, args.skip_task_ids, args.report_only, args.embed_image)
+    run(
+        args.conf_file,
+        args.skip_task_ids,
+        args.report_only,
+        args.quiet,
+        args.separate_image,
+    )
