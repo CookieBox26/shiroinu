@@ -1,0 +1,88 @@
+out_dir_name = "<CONF_FILE_NAME>"
+suffix = false
+batch_size_eval = 256
+
+[data]
+path = "~/dataset/traffic/traffic.csv"
+colname_timestamp = "date"
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+
+# -------------------- models --------------------
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+[models.report]
+name = "SA"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+decay_rate = 0.9
+[models.report]
+name = "SA09"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+decay_rate = 0.8
+[models.report]
+name = "SA08"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+decay_rate = 0.7
+[models.report]
+name = "SA07"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+decay_rate = 0.6
+[models.report]
+name = "SA06"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [24, 7, 4]
+pred_len = [24, 7]
+period_len = [24, 7]
+decay_rate = 0.5
+[models.report]
+name = "SA05"
+
+# -------------------- tasks --------------------
+
+[[tasks]]
+task_type = "eval"
+valid_range = [0.8, 1.0]
+models = [
+{ id = 0, state_path = "" },
+{ id = 1, state_path = "" },
+{ id = 2, state_path = "" },
+{ id = 3, state_path = "" },
+{ id = 4, state_path = "" },
+{ id = 5, state_path = "" },
+]
+percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
+[tasks.criterion_eval]
+path = "shiroinu.criteria.MAELoss"
+params = {}

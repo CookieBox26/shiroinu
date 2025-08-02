@@ -3,7 +3,6 @@ import os
 import math
 import datetime
 from types import SimpleNamespace
-import copy
 
 
 class Config:
@@ -40,32 +39,35 @@ class Config:
                     d['tasks'][i_task][field] = SimpleNamespace(**d['tasks'][i_task][field])
         self.tasks = [SimpleNamespace(**task) for task in d['tasks']]
 
-    def get_model(self, id, state_path=''):
-        model_ = copy.deepcopy(self.models[id])
+    def get_model(self, id, state_path='', for_report=False):
+        model_ = {k: self.models[id][k] for k in ['path', 'params']}
         if state_path != '':
             if '<HERE>' in state_path:
                 state_path = state_path.replace('<HERE>', self.log_dir)
             model_['params']['state_path'] = state_path
+        if for_report and ('report' in self.models[id]):
+            for k in self.models[id]['report']:
+                model_[k] = self.models[id]['report'][k]
         return model_
 
     def __init__(self, d):
-        self.criteria = []
-
-        fields = [
-            'out_dir_name', 'batch_size_eval', 'data',
-            'criteria', 'models', 'tasks',
+        fields_required = [
+            'out_dir_name',
+            'batch_size_eval',
+            'data',
+            'models',
+            'tasks',
         ]
-        for field in fields:
-            if field in ['out_dir_name', 'batch_size_eval', 'data']:
-                assert field in d, f'A required field is missing: {field}'
-            if field == 'data':
-                self._set_data(d)
-            elif field == 'models':
-                self._set_models(d)
-            elif field == 'tasks':
-                self._set_tasks(d)
-            else:
-                setattr(self, field, d[field])
+        for field in fields_required:
+            assert field in d, f'A required field is missing: {field}'
+
+        self.out_dir_name = d['out_dir_name']
+        self.batch_size_eval = d['batch_size_eval']
+        self._set_data(d)
+        self._set_models(d)
+        self._set_tasks(d)
+
+        self.criteria = [] if ('criteria' not in d) else d['criteria']
 
         suffix = '' if (('suffix' not in d) or not d['suffix']) \
             else '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')

@@ -3,6 +3,7 @@ import shirotsubaki.report
 from shirotsubaki.element import Element as Elm
 import numpy as np
 import pandas as pd
+import math
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 import base64
@@ -56,7 +57,7 @@ def _pairs_to_table(pairs):
 
 
 def _to_picture(output_path, filename, emb=False):
-    kwargs = {'format': 'png', 'bbox_inches': 'tight'}
+    kwargs = {'format': 'png', 'bbox_inches': 'tight'}  # , 'dpi': 72
     if emb:
         pic_io_bytes = io.BytesIO()
         plt.savefig(pic_io_bytes, **kwargs)
@@ -152,9 +153,10 @@ def _report_task_train(rp, conf, i_task, info, embed_image):
 
 
 def _plot_prediction(
-    ax, n_model, x, true, preds, i_channel, tsta, info,
+    ax, model_names, x, true, preds, i_channel, tsta, info,
     xtick_step=12, show_xticklabels=True, diff=False,
 ):
+    n_model = len(model_names)
     colname = info['data']['cols'][i_channel]
     colname_org = info['data']['cols_org'][i_channel]
 
@@ -168,7 +170,7 @@ def _plot_prediction(
         li_pred = [y_[i_channel] for y_ in preds[i_model]]
         if diff:
             li_pred = [y_1 - y_0 for y_0, y_1 in zip(li_true, li_pred)]
-        desc[f'model_{i_model}'] = ax.plot(x, li_pred)[0]
+        desc[model_names[i_model]] = ax.plot(x, li_pred)[0]
     ax.set_xticks(x[::xtick_step])
     if show_xticklabels:
         ax.set_xticklabels(tsta[::xtick_step], rotation=90, fontsize=11)
@@ -176,11 +178,17 @@ def _plot_prediction(
         ax.tick_params(labelbottom=False)
     ax.set_ylabel(f'{colname} ({colname_org})')
     ax.grid(axis='both', linestyle='dotted', linewidth=1)
-    ax.legend(desc.values(), desc.keys(), loc='upper left', bbox_to_anchor=(1.01, 1))
+    ax.legend(
+        desc.values(),
+        desc.keys(),
+        loc='upper left',
+        bbox_to_anchor=(1.01, 1),
+        ncol=math.ceil((n_model + 1) / 4.0),
+    )
 
 
 def _plot_predictions(
-    rp, n_model, true, preds, tsta, info, output_path, prefix,
+    rp, model_names, true, preds, tsta, info, output_path, prefix,
     diff=False, embed_image=False,
 ):
     pred_len, n_channel = true.shape
@@ -191,20 +199,38 @@ def _plot_predictions(
         n_channel_ = len(li_i_channel)
         if n_channel_ == 1:
             fig, ax = plt.subplots(nrows=1, figsize=(7.5, 1.5))
-            _plot_prediction(ax, n_model, x, true, preds, i_channel_0, tsta, info, diff=diff)
+            _plot_prediction(ax, model_names, x, true, preds, i_channel_0, tsta, info, diff=diff)
         else:
             fig, ax = plt.subplots(nrows=n_channel_, figsize=(7.5, 1.5 * n_channel_))
             for i_ax, i_channel in enumerate(li_i_channel):
                 _plot_prediction(
-                    ax[i_ax], n_model, x, true, preds, i_channel, tsta, info,
+                    ax[i_ax], model_names, x, true, preds, i_channel, tsta, info,
                     diff=diff, show_xticklabels=(i_ax == n_channel_ - 1),
                 )
             plt.subplots_adjust(hspace=0.1)
         contents[f'y{i_channel_0}-'] = \
             _to_picture(output_path, f'{prefix}_{i_channel_0}.png', embed_image)
-        if i_graph == 20:
+        if i_graph == 5:
             break
     _append_as_tabs(rp, prefix, contents)
+
+
+def _highlight_min_and_second_min(df, model_names):
+    cols_0 = model_names
+    cols_1 = [col for col in df.columns if col.startswith(f'{model_names[0]}-')]
+    def _highlight_0(row):
+        styles = pd.Series('', index=row.index)
+        indices = row.sort_values().index
+        styles[indices[0]] = 'background: #8dce6f;'
+        styles[indices[1]] = 'background: #ccf188;'
+        return styles
+    def _highlight_1(v):
+        return 'color: #d62728;' if v < 0 else 'color: #048243;'
+    return df.style.apply(
+        _highlight_0, axis=1, subset=cols_0,
+    ).map(
+        _highlight_1, subset=cols_1,
+    )
 
 
 def _report_task_eval(rp, conf, i_task, info, embed_image):
@@ -225,37 +251,41 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
     rp.append(Elm('h3', 'Models'))
     pairs = []
     for i_model in range(n_model):
-        model = conf.get_model(**task.models[i_model])
-        pairs.append((f'model_{i_model}', [model['path'] + '<br/>' + str(model['params'])]))
+        model = conf.get_model(for_report=True, **task.models[i_model])
+        model_name = f'model_{i_model}' if ('name' not in model) else model['name']
+        pairs.append((model_name, [model['path'] + '<br/>' + str(model['params'])]))
     rp.append(_pairs_to_table(pairs))
+    model_names = [v[0] for v in pairs]
 
     rp.append(Elm('h3', 'Loss per Sample'))
     def get_base_df():
         return pd.DataFrame({'cols_org': info['data']['cols_org']}, index=info['data']['cols'])
     df_ = get_base_df()
     for i_model in range(n_model):
-        df_[f'model_{i_model}'] = info['loss_per_sample'][i_model]
+        df_[model_names[i_model]] = info['loss_per_sample'][i_model]
     d = {}
     for col in df_.columns:
         d[col] = '' if (col == 'cols_org') else df_[col].mean()
     df_ = pd.concat([pd.DataFrame(d, index=['mean']), df_])
     for i_model in range(1, n_model):
-        df_[f'model_{i_model}-model_0'] = df_[f'model_{i_model}'] - df_[f'model_0']
-    rp.append(df_.head(1).to_html())
-    content = df_.to_html()
+        df_[f'{model_names[0]}-{model_names[i_model]}'] \
+            = df_[model_names[0]] - df_[model_names[i_model]]
+    rp.append(_highlight_min_and_second_min(df_.head(1), model_names).to_html())
+    content = _highlight_min_and_second_min(df_, model_names).to_html()
     _append_as_toggle(rp, f'toggle_task_{i_task}_model_{i_model}_loss', content)
 
-    for i_model in range(n_model):
-        rp.append(Elm('h4', f'model_{i_model}'))
-        df_ = get_base_df()
-        for i_pct, pct in enumerate(task.percentile_points):
-            df_[f'{pct:.0%}'] = info['percentiles'][i_model][i_pct]
-        for i_pct in range(int(len(task.percentile_points) / 2)):
-            pct_0 = task.percentile_points[i_pct]
-            pct_1 = task.percentile_points[- (i_pct + 1)]
-            df_[f'{pct_1:.0%}-{pct_0:.0%}'] = df_[f'{pct_1:.0%}'] - df_[f'{pct_0:.0%}']
-        content = df_.to_html()
-        _append_as_toggle(rp, f'toggle_task_{i_task}_model_{i_model}_loss_percentiles', content)
+    if False:
+        for i_model in range(n_model):
+            rp.append(Elm('h4', f'model_{i_model}'))
+            df_ = get_base_df()
+            for i_pct, pct in enumerate(task.percentile_points):
+                df_[f'{pct:.0%}'] = info['percentiles'][i_model][i_pct]
+            for i_pct in range(int(len(task.percentile_points) / 2)):
+                pct_0 = task.percentile_points[i_pct]
+                pct_1 = task.percentile_points[- (i_pct + 1)]
+                df_[f'{pct_1:.0%}-{pct_0:.0%}'] = df_[f'{pct_1:.0%}'] - df_[f'{pct_0:.0%}']
+            content = df_.to_html()
+            _append_as_toggle(rp, f'toggle_task_{i_task}_model_{i_model}_loss_percentiles', content)
 
     tsta = list(np.load(os.path.join(conf.log_dir, f'sample_0_tsta_task_{i_task}.npy')))
     tsta = [tsta_.replace(':00', '') for tsta_ in tsta]
@@ -267,13 +297,13 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
 
     rp.append(Elm('h3', 'Prediction Plot'))
     _plot_predictions(
-        rp, n_model, true, preds, tsta, info, conf.log_dir,
+        rp, model_names, true, preds, tsta, info, conf.log_dir,
         f'task_{i_task}_pred', embed_image=embed_image,
     )
 
     rp.append(Elm('h3', 'Prediction Plot (Diff)'))
     _plot_predictions(
-        rp, n_model, true, preds, tsta, info, conf.log_dir,
+        rp, model_names, true, preds, tsta, info, conf.log_dir,
         f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image,
     )
 
@@ -299,7 +329,7 @@ def report(conf_file, embed_image):
     print('Embed image in report' if embed_image else 'Output image file separately')
 
     rp = shirotsubaki.report.Report()
-    rp.style.set('body', 'min-width', '1200px')
+    rp.style.set('body', 'min-width', '1350px')
     rp.style.set('table', 'margin-bottom', '0.5em')
 
     rp.style.set('label', 'cursor', 'pointer')
