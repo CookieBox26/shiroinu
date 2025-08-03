@@ -91,6 +91,9 @@ def _get_channels_df(info, key):
         'cols_org': info[key]['cols_org'],
         'means': info[key]['means'],
         'stds': info[key]['stds'],
+        'q1s': info[key]['q1s'],
+        'q2s': info[key]['q2s'],
+        'q3s': info[key]['q3s'],
     }, index=info[key]['cols'])
 
 

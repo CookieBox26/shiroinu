@@ -34,3 +34,8 @@ torch = [
     {index="torch-cuda", marker="sys_platform=='linux'"},
     {index="torch-cpu", marker="sys_platform=='win32'"},
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]

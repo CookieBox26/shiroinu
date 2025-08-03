@@ -45,9 +45,16 @@ class TSDataset(Dataset):
         self.n_feats = len(self.df.columns)
         self.means = []
         self.stds = []
+        self.q1s = []
+        self.q2s = []
+        self.q3s = []
         for col in self.df.columns:
             self.means.append(self.df[col].mean())
             self.stds.append(self.df[col].std())
+            qtiles = list(self.df[col].quantile([0.25, 0.5, 0.7]))
+            self.q1s.append(qtiles[0])
+            self.q2s.append(qtiles[1])
+            self.q3s.append(qtiles[2])
 
     def get_info_for_logger(self):
         return {
@@ -69,6 +76,9 @@ class TSDataset(Dataset):
             ],
             'means': self.means,
             'stds': self.stds,
+            'q1s': self.q1s,
+            'q2s': self.q2s,
+            'q3s': self.q3s,
         }
 
     def __len__(self):
@@ -97,10 +107,10 @@ class TSDataset(Dataset):
     def collate_fn(batch):
         tsta = np.array([v[0] for v in batch])  # batch_size, seq_len
         tste = TSDataset.to_tensor(np.array([v[1] for v in batch]))  # batch_size, seq_len
-        data = TSDataset.to_tensor(np.array([v[2] for v in batch]))  # batch_size, seq_len, num_of_roads
+        data = TSDataset.to_tensor(np.array([v[2] for v in batch]))  # batch_size, seq_len, n_channel
         tsta_future = np.array([v[3] for v in batch])  # batch_size, pred_len
         tste_future = TSDataset.to_tensor(np.array([v[4] for v in batch]))  # batch_size, pred_len
-        data_future = TSDataset.to_tensor(np.array([v[5] for v in batch]))  # batch_size, pred_len, num_of_roads
+        data_future = TSDataset.to_tensor(np.array([v[5] for v in batch]))  # batch_size, pred_len, n_channel
         return TSDataset.TSBatch(tsta, tste, data, tsta_future, tste_future, data_future)
 
     @staticmethod

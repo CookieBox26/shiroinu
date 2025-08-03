@@ -49,3 +49,5 @@ A report will be saved as `report.html`.
 ### Note
 
 - If a non-empty comma-separated string or a list is specified as the `data.white_list`, only the time series corresponding to those columns will be used. However, internally, regardless of the original column names, they will be renamed in the specified order as `y0, y1, y2, ...`.
+- Some features are tested with unit tests. To run them, install with `uv sync --extra test` and run with `uv run pytest`.
+

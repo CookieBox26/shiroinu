@@ -82,7 +82,7 @@ def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
                     early_stop_counter = 0
                 else:
                     early_stop_counter += 1
-                if (task.early_stop) and (early_stop_counter >= 3):
+                if (task.early_stop) and (early_stop_counter >= 5):
                     stop = True
         if stop:
             break

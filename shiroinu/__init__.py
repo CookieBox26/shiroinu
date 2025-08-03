@@ -46,5 +46,11 @@ def create_instance(path, params, dataset):
         params['means_'] = dataset.means
     if 'stds_' in model_class.data_based_hyperparams:
         params['stds_'] = dataset.stds
+    if 'q1s_' in model_class.data_based_hyperparams:
+        params['q1s_'] = dataset.q1s
+    if 'q2s_' in model_class.data_based_hyperparams:
+        params['q2s_'] = dataset.q2s
+    if 'q3s_' in model_class.data_based_hyperparams:
+        params['q3s_'] = dataset.q3s
 
     return model_class.create(**params)

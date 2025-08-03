@@ -1,6 +1,6 @@
 from shiroinu.models.base_model import BaseModel
 from shiroinu.models.simple_average import SimpleAverage
-from shiroinu.scaler import StandardScaler
+from shiroinu.scaler import StandardScaler, IqrScaler
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,7 +12,6 @@ class series_decomp(nn.Module):
         super().__init__()
         self.kernel_size = kernel_size
         self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=1, padding=0)
-
     def moving_avg(self, x):
         front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)
@@ -20,33 +19,20 @@ class series_decomp(nn.Module):
         x = self.avg(x.permute(0, 2, 1))
         x = x.permute(0, 2, 1)
         return x
-
     def forward(self, x):
         moving_mean = self.moving_avg(x)
         res = x - moving_mean
         return res, moving_mean
 
 
-class DLinear(BaseModel):
-    data_based_hyperparams = ['means_', 'stds_']
-
-    def __init__(
-        self,
-        seq_len,
-        pred_len,
-        kernel_size,
-        bias,
-        means_,
-        stds_,
-    ):
+class DLinearImpl(BaseModel):
+    def __init__(self, seq_len, pred_len, kernel_size, bias):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.decompsition = series_decomp(kernel_size)
         self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len, bias=bias)
         self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len, bias=bias)
-        self.scaler = StandardScaler(means_, stds_)
-
     def forward(self, x):
         seasonal_init, trend_init = self.decompsition(x)
         seasonal_init = seasonal_init.permute(0, 2, 1)
@@ -56,43 +42,70 @@ class DLinear(BaseModel):
         x = seasonal_output + trend_output
         x = x.permute(0, 2, 1)  # to [Batch, Output length, Channel]
         return x, {'seasonal': seasonal_output, 'trend': trend_output}
-
     def extract_input(self, batch):
         return self.scaler.scale(batch.data[:, -self.seq_len:, :])
-
     def extract_target(self, batch):
         return self.scaler.scale(batch.data_future[:, :self.pred_len])
-
     def predict(self, batch):
         input = self.extract_input(batch)
         output, _ = self(input)
         return self.scaler.rescale(output)
 
 
-class DLinearRes(DLinear):
-    """Take the difference from the naive forecast
-    """
-    def __init__(self, seq_len, pred_len, kernel_size, period_len, bias, means_, stds_):
-        super().__init__(seq_len, pred_len, kernel_size, bias, means_, stds_)
-        self.baseline = SimpleAverage.create(**{
-            'seq_len': seq_len, 'pred_len': pred_len, 'period_len': period_len,
-        })
+class DLinear(DLinearImpl):
+    data_based_hyperparams = ['means_', 'stds_']
+    def __init__(self, seq_len, pred_len, kernel_size, bias, means_, stds_):
+        super().__init__(seq_len, pred_len, kernel_size, bias)
+        self.scaler = StandardScaler(means_, stds_)
 
+
+class DLinearIqr(DLinearImpl):
+    data_based_hyperparams = ['q1s_', 'q2s_', 'q3s_']
+    def __init__(self, seq_len, pred_len, kernel_size, bias, q1s_, q2s_, q3s_):
+        super().__init__(seq_len, pred_len, kernel_size, bias)
+        self.scaler = IqrScaler(q1s_, q2s_, q3s_)
+
+
+class DLinearResImpl(DLinearImpl):
+    def __init__(self, seq_len, pred_len, kernel_size, bias, period_len, decay_rate=1.0):
+        super().__init__(seq_len, pred_len, kernel_size, bias)
+        self.baseline = SimpleAverage(
+            seq_len=seq_len, pred_len=pred_len, period_len=period_len,
+            decay_rate=decay_rate,
+        )
     def extract_input(self, batch):
         input_ = self.scaler.scale(batch.data[:, -self.seq_len:, :])
         naive = self.baseline(input_)
         return input_ - naive.repeat(1, int(self.seq_len / self.baseline.period_len), 1)
-
     def extract_target(self, batch):
         naive = self.baseline(self.scaler.scale(batch.data[:, -self.seq_len:, :]))
         target = self.scaler.scale(batch.data_future[:, :self.pred_len])
         return target - naive
-
     def predict(self, batch):
         naive = self.baseline(self.scaler.scale(batch.data[:, -self.seq_len:, :]))
         input = self.extract_input(batch)
         output, _ = self(input)
         return self.scaler.rescale(naive + output)
+
+
+class DLinearRes(DLinearResImpl):
+    data_based_hyperparams = ['means_', 'stds_']
+    def __init__(
+        self, seq_len, pred_len, kernel_size, bias, period_len,
+        means_, stds_, decay_rate=1.0,
+    ):
+        super().__init__(seq_len, pred_len, kernel_size, bias, period_len, decay_rate)
+        self.scaler = StandardScaler(means_, stds_)
+
+
+class DLinearResIqr(DLinearResImpl):
+    data_based_hyperparams = ['q1s_', 'q2s_', 'q3s_']
+    def __init__(
+        self, seq_len, pred_len, kernel_size, bias, period_len,
+        q1s_, q2s_, q3s_, decay_rate=1.0,
+    ):
+        super().__init__(seq_len, pred_len, kernel_size, bias, period_len, decay_rate)
+        self.scaler = IqrScaler(q1s_, q2s_, q3s_)
 
 
 class DLinearSparse(DLinear):
