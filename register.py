@@ -25,6 +25,7 @@ def main():
     targets = [
         'outputs/sample_traffic_mini_0',
         'outputs/sample_traffic_mini_1',
+        'outputs/sample_traffic_sa',
     ]
     for target in targets:
         file_0 = os.path.join(target, 'report.html')
