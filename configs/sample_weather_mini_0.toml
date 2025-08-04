@@ -1,0 +1,45 @@
+out_dir_name = "<CONF_FILE_NAME>"
+suffix = false
+batch_size_eval = 256
+
+[data]
+path = "~/dataset/weather/weather.csv"
+colname_timestamp = "date"
+white_list = ["p (mbar)", "T (degC)", "Tpot (K)", "Tdew (degC)"]
+seq_len = [6, 24, 4]
+pred_len = [6, 24]
+
+# -------------------- models --------------------
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [6, 24, 4]
+pred_len = [6, 24]
+period_len = [6, 24]
+[models.report]
+name = "SA"
+
+[[models]]
+path = "shiroinu.models.simple_average.SimpleAverage"
+[models.params]
+seq_len = [6, 24, 4]
+pred_len = [6, 24]
+period_len = [6, 24]
+decay_rate = 0.9
+[models.report]
+name = "SA09"
+
+# -------------------- tasks --------------------
+
+[[tasks]]
+task_type = "eval"
+valid_range = [0.8, 1.0]
+models = [
+{ id = 0, state_path = "" },
+{ id = 1, state_path = "" },
+]
+percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
+[tasks.criterion_eval]
+path = "shiroinu.criteria.MAELoss"
+params = {}

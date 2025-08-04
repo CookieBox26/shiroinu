@@ -56,8 +56,8 @@ def _pairs_to_table(pairs):
     return Elm('table', tbody).set_attr('border', '1')
 
 
-def _to_picture(output_path, filename, emb=False):
-    kwargs = {'format': 'png', 'bbox_inches': 'tight'}  # , 'dpi': 72
+def _to_picture(output_path, filename, emb=False, dpi=72):
+    kwargs = {'format': 'png', 'bbox_inches': 'tight', 'dpi': dpi}
     if emb:
         pic_io_bytes = io.BytesIO()
         plt.savefig(pic_io_bytes, **kwargs)
@@ -111,7 +111,7 @@ def _get_ranges_df(conf, info, key):
         'Start of Prediction Window', 'End of Prediction Window']).T
 
 
-def _report_task_train(rp, conf, i_task, info, embed_image):
+def _report_task_train(rp, conf, i_task, info, embed_image, dpi):
     task = conf.tasks[i_task]
 
     for type_ in ['train', 'valid']:
@@ -141,15 +141,15 @@ def _report_task_train(rp, conf, i_task, info, embed_image):
         _plot_loss_graph(
             info, ['loss_0_per_sample_train', 'loss_0_per_sample_valid'],
             task.criterion_target['path'])
-        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train_valid.png', embed_image))
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train_valid.png', embed_image, dpi))
     else:
         _plot_loss_graph(info, ['loss_0_per_sample_train'], task.criterion_target['path'])
-        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train.png', embed_image))
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_train.png', embed_image, dpi))
         _plot_loss_graph(info, ['loss_0_per_sample_valid'], conf.criteria[0]['path'])
-        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_0_valid.png', embed_image))
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_0_valid.png', embed_image, dpi))
     for i_crit in range(1, len(conf.criteria)):
         _plot_loss_graph(info, [f'loss_{i_crit}_per_sample_valid'], conf.criteria[i_crit]['path'])
-        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_{i_crit}_valid.png', embed_image))
+        rp.append(_to_picture(conf.log_dir, f'task_{i_task}_loss_{i_crit}_valid.png', embed_image, dpi))
 
     rp.append(pd.DataFrame({
         'epoch_id_best': [info['epoch_id_best']],
@@ -194,7 +194,7 @@ def _plot_prediction(
 
 def _plot_predictions(
     rp, model_names, true, preds, tsta, info, output_path, prefix,
-    diff=False, embed_image=False, max_n_graph=200,
+    diff=False, embed_image=False, dpi=72, max_n_graph=200,
 ):
     pred_len, n_channel = true.shape
     x = list(range(pred_len))
@@ -214,7 +214,7 @@ def _plot_predictions(
                 )
             plt.subplots_adjust(hspace=0.1)
         contents[f'y{i_channel_0}-'] = \
-            _to_picture(output_path, f'{prefix}_{i_channel_0}.png', embed_image)
+            _to_picture(output_path, f'{prefix}_{i_channel_0}.png', embed_image, dpi)
         if (i_graph + 1) >= max_n_graph:
             break
     _append_as_tabs(rp, prefix, contents)
@@ -238,7 +238,7 @@ def _highlight_min_and_second_min(df, model_names):
     )
 
 
-def _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph):
+def _report_task_eval(rp, conf, i_task, info, embed_image, dpi, max_n_graph):
     task = conf.tasks[i_task]
     n_model = len(task.models)
 
@@ -303,13 +303,13 @@ def _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph):
     rp.append(Elm('h3', 'Prediction Plot'))
     _plot_predictions(
         rp, model_names, true, preds, tsta, info, conf.log_dir,
-        f'task_{i_task}_pred', embed_image=embed_image, max_n_graph=max_n_graph,
+        f'task_{i_task}_pred', embed_image=embed_image, dpi=dpi, max_n_graph=max_n_graph,
     )
 
     rp.append(Elm('h3', 'Prediction Plot (Diff)'))
     _plot_predictions(
         rp, model_names, true, preds, tsta, info, conf.log_dir,
-        f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image, max_n_graph=max_n_graph,
+        f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image, dpi=dpi, max_n_graph=max_n_graph,
     )
 
     #for i, key_loss in enumerate(li_key_loss):
@@ -318,20 +318,21 @@ def _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph):
     #ax.set_ylabel(ylabel)
 
 
-def _report_task(rp, conf, i_task, embed_image, max_n_graph):
+def _report_task(rp, conf, i_task, embed_image, dpi, max_n_graph):
     task = conf.tasks[i_task]
     log_path = os.path.join(conf.log_dir, f'info_task_{i_task}.toml')
     info = None if (not os.path.isfile(log_path)) else toml.load(log_path)
     rp.append(Elm('h2', f'task_{i_task} ({task.task_type})'))
     if task.task_type == 'train':
-        _report_task_train(rp, conf, i_task, info, embed_image)
+        _report_task_train(rp, conf, i_task, info, embed_image, dpi)
     elif task.task_type == 'eval':
-        _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph)
+        _report_task_eval(rp, conf, i_task, info, embed_image, dpi, max_n_graph)
 
 
-def report(conf_file, embed_image, max_n_graph=200):
+def report(conf_file, embed_image, dpi, max_n_graph=200):
     conf = Config.from_conf_file(conf_file)
     print('Embed image in report' if embed_image else 'Output image file separately')
+    print(f'{dpi=}, {max_n_graph=}')
 
     rp = shirotsubaki.report.Report()
     rp.style.set('body', 'min-width', '1350px')
@@ -353,7 +354,7 @@ def report(conf_file, embed_image, max_n_graph=200):
     rp.set('title', conf.out_dir_name)
     rp.append(Elm('h1', conf.out_dir_name))
     for i_task in range(len(conf.tasks)):
-        _report_task(rp, conf, i_task, embed_image, max_n_graph)
+        _report_task(rp, conf, i_task, embed_image, dpi, max_n_graph)
 
     out_path = os.path.join(conf.log_dir, 'report.html')
     rp.output(out_path)

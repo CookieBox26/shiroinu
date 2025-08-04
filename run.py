@@ -10,7 +10,8 @@ def run_task_train(data_loader, criterion, model, optimizer):
     loss_total = 0.0
     for i_batch, batch in enumerate(data_loader):
         optimizer.zero_grad()
-        loss, _, _, _ = model.get_loss(batch, criterion)
+        loss_, _, _, _ = model.get_loss(batch, criterion)
+        loss = loss_ if isinstance(loss_, torch.Tensor) else loss_[0]
         loss.backward()
         optimizer.step()
         loss_total += batch.tsta_future.shape[0] * loss.item()
@@ -21,7 +22,8 @@ def run_task_valid(data_loader, criterion, model):
     loss_total = 0.0
     with torch.no_grad():
         for i_batch, batch in enumerate(data_loader):
-            loss, _, _, _ = model.get_loss(batch, criterion)
+            loss_, _, _, _ = model.get_loss(batch, criterion)
+            loss = loss_ if isinstance(loss_, torch.Tensor) else loss_[0]
             loss_total += batch.tsta_future.shape[0] * loss.item()
     return loss_total / data_loader.dataset.n_sample
 
@@ -162,13 +164,13 @@ def run_tasks(conf, logger, li_skip_task_id):
         logger.end_task()
 
 
-def run(conf_file, skip_task_ids, report_only, quiet, separate_image, max_n_graph):
+def run(conf_file, skip_task_ids, report_only, quiet, separate_image, dpi, max_n_graph):
     conf, logger = get_conf_and_logger(conf_file)
     logger.print_epoch = (not quiet)
     li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
         run_tasks(conf, logger, li_skip_task_id)
-    report(conf_file, (not separate_image), max_n_graph=max_n_graph)
+    report(conf_file, (not separate_image), dpi=dpi, max_n_graph=max_n_graph)
 
 
 if __name__ == '__main__':
@@ -178,6 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--report_only', action='store_true')
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-i', '--separate_image', action='store_true')
+    parser.add_argument('--dpi', type=int, default=72)
     parser.add_argument('--max_n_graph', type=int, default=200)
     args = parser.parse_args()
     run(
@@ -186,5 +189,6 @@ if __name__ == '__main__':
         args.report_only,
         args.quiet,
         args.separate_image,
+        args.dpi,
         args.max_n_graph,
     )
