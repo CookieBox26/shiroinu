@@ -23,6 +23,7 @@ def copy(target, file_0, file_1):
 def main():
     ofile = open('index.md', mode='w', encoding='utf-8', newline='\n')
     targets = [
+        'outputs/sample_traffic_dlinear_0',
         'outputs/sample_traffic_mini_0',
         'outputs/sample_traffic_mini_1',
         'outputs/sample_traffic_sa',
