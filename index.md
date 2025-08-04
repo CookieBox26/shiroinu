@@ -1,3 +1,2 @@
 - [sample_traffic_mini_0.html](sample_traffic_mini_0.html)
-- [sample_traffic_mini_1.html](sample_traffic_mini_1.html)
 - [sample_traffic_sa.html](sample_traffic_sa.html)
