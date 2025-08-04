@@ -44,7 +44,7 @@ class Logger:
     def add_info_epoch(self, key, value):
         self.info['epochs'][-1][key] = value
 
-    def save_model(self, model, suffix):
+    def save_model(self, model, suffix='_best'):
         model_path = os.path.join(self.log_dir, f'model{suffix}_task_{self.i_task}.pth')
         torch.save(model.state_dict(), model_path)
         self.info[f'epoch_id{suffix}'] = self.i_epoch

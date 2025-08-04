@@ -77,7 +77,7 @@ def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
             logger.add_info_epoch(f'loss_{i_criterion}_per_sample_valid', loss_valid)
             if i_criterion == 0:
                 if loss_valid < loss_valid_best:
-                    logger.save_model(model, '_best')
+                    logger.save_model(model)
                     loss_valid_best = loss_valid
                     early_stop_counter = 0
                 else:
@@ -86,7 +86,6 @@ def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
                     stop = True
         if stop:
             break
-    # logger.save_model(model, '_last')
     return model
 
 
@@ -163,13 +162,13 @@ def run_tasks(conf, logger, li_skip_task_id):
         logger.end_task()
 
 
-def run(conf_file, skip_task_ids, report_only, quiet, separate_image):
+def run(conf_file, skip_task_ids, report_only, quiet, separate_image, max_n_graph):
     conf, logger = get_conf_and_logger(conf_file)
     logger.print_epoch = (not quiet)
     li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
         run_tasks(conf, logger, li_skip_task_id)
-    report(conf_file, (not separate_image))
+    report(conf_file, (not separate_image), max_n_graph=max_n_graph)
 
 
 if __name__ == '__main__':
@@ -179,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--report_only', action='store_true')
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-i', '--separate_image', action='store_true')
+    parser.add_argument('--max_n_graph', type=int, default=200)
     args = parser.parse_args()
     run(
         args.conf_file,
@@ -186,4 +186,5 @@ if __name__ == '__main__':
         args.report_only,
         args.quiet,
         args.separate_image,
+        args.max_n_graph,
     )

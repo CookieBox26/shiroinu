@@ -1,11 +1,8 @@
 import torch
-import torch.nn as nn
 from abc import ABC, abstractmethod
 
 
-class BaseModel(nn.Module, ABC):
-    data_based_hyperparams = ['mean_', 'std_']
-
+class BaseModel(torch.nn.Module, ABC):
     def __init__(self):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -28,18 +25,22 @@ class BaseModel(nn.Module, ABC):
         pass
 
     @abstractmethod
-    def predict(self, batch, dataset):
+    def forward(self, input_):
+        pass
+
+    @abstractmethod
+    def predict(self, batch):
         pass
 
     def get_loss(self, batch, criterion):
-        input = self.extract_input(batch)
+        input_ = self.extract_input(batch)
         target = self.extract_target(batch)
-        output = self(input)
+        output = self(input_)
         if isinstance(output, tuple):
             loss = criterion(output[0], target)
         else:
             loss = criterion(output, target)
-        return loss, input, target, output
+        return loss, input_, target, output
 
     def count_trainable_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

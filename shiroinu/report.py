@@ -87,14 +87,16 @@ def _plot_loss_graph(info, li_key_loss, ylabel):
 
 
 def _get_channels_df(info, key):
-    return pd.DataFrame({
+    data = {
         'cols_org': info[key]['cols_org'],
         'means': info[key]['means'],
         'stds': info[key]['stds'],
-        'q1s': info[key]['q1s'],
-        'q2s': info[key]['q2s'],
-        'q3s': info[key]['q3s'],
-    }, index=info[key]['cols'])
+    }
+    if 'q1s' in info[key]:
+        data['q1s'] = info[key]['q1s']
+        data['q2s'] = info[key]['q2s']
+        data['q3s'] = info[key]['q3s']
+    return pd.DataFrame(data, index=info[key]['cols'])
 
 
 def _get_ranges_df(conf, info, key):
@@ -192,7 +194,7 @@ def _plot_prediction(
 
 def _plot_predictions(
     rp, model_names, true, preds, tsta, info, output_path, prefix,
-    diff=False, embed_image=False,
+    diff=False, embed_image=False, max_n_graph=200,
 ):
     pred_len, n_channel = true.shape
     x = list(range(pred_len))
@@ -213,7 +215,7 @@ def _plot_predictions(
             plt.subplots_adjust(hspace=0.1)
         contents[f'y{i_channel_0}-'] = \
             _to_picture(output_path, f'{prefix}_{i_channel_0}.png', embed_image)
-        if i_graph == 5:
+        if (i_graph + 1) >= max_n_graph:
             break
     _append_as_tabs(rp, prefix, contents)
 
@@ -236,7 +238,7 @@ def _highlight_min_and_second_min(df, model_names):
     )
 
 
-def _report_task_eval(rp, conf, i_task, info, embed_image):
+def _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph):
     task = conf.tasks[i_task]
     n_model = len(task.models)
 
@@ -301,13 +303,13 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
     rp.append(Elm('h3', 'Prediction Plot'))
     _plot_predictions(
         rp, model_names, true, preds, tsta, info, conf.log_dir,
-        f'task_{i_task}_pred', embed_image=embed_image,
+        f'task_{i_task}_pred', embed_image=embed_image, max_n_graph=max_n_graph,
     )
 
     rp.append(Elm('h3', 'Prediction Plot (Diff)'))
     _plot_predictions(
         rp, model_names, true, preds, tsta, info, conf.log_dir,
-        f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image,
+        f'task_{i_task}_pred_diff', diff=True, embed_image=embed_image, max_n_graph=max_n_graph,
     )
 
     #for i, key_loss in enumerate(li_key_loss):
@@ -316,7 +318,7 @@ def _report_task_eval(rp, conf, i_task, info, embed_image):
     #ax.set_ylabel(ylabel)
 
 
-def _report_task(rp, conf, i_task, embed_image):
+def _report_task(rp, conf, i_task, embed_image, max_n_graph):
     task = conf.tasks[i_task]
     log_path = os.path.join(conf.log_dir, f'info_task_{i_task}.toml')
     info = None if (not os.path.isfile(log_path)) else toml.load(log_path)
@@ -324,10 +326,10 @@ def _report_task(rp, conf, i_task, embed_image):
     if task.task_type == 'train':
         _report_task_train(rp, conf, i_task, info, embed_image)
     elif task.task_type == 'eval':
-        _report_task_eval(rp, conf, i_task, info, embed_image)
+        _report_task_eval(rp, conf, i_task, info, embed_image, max_n_graph)
 
 
-def report(conf_file, embed_image):
+def report(conf_file, embed_image, max_n_graph=200):
     conf = Config.from_conf_file(conf_file)
     print('Embed image in report' if embed_image else 'Output image file separately')
 
@@ -351,7 +353,7 @@ def report(conf_file, embed_image):
     rp.set('title', conf.out_dir_name)
     rp.append(Elm('h1', conf.out_dir_name))
     for i_task in range(len(conf.tasks)):
-        _report_task(rp, conf, i_task, embed_image)
+        _report_task(rp, conf, i_task, embed_image, max_n_graph)
 
     out_path = os.path.join(conf.log_dir, 'report.html')
     rp.output(out_path)

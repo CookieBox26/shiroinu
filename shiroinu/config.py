@@ -39,7 +39,7 @@ class Config:
                     d['tasks'][i_task][field] = SimpleNamespace(**d['tasks'][i_task][field])
         self.tasks = [SimpleNamespace(**task) for task in d['tasks']]
 
-    def get_model(self, id, state_path='', for_report=False):
+    def get_model(self, id, state_path='', note='', for_report=False):
         model_ = {k: self.models[id][k] for k in ['path', 'params']}
         if state_path != '':
             if '<HERE>' in state_path:
@@ -47,6 +47,9 @@ class Config:
             model_['params']['state_path'] = state_path
         if for_report and ('report' in self.models[id]):
             for k in self.models[id]['report']:
+                if (k == 'name') and (note != ''):
+                    model_[k] = self.models[id]['report'][k] + f' [{note}]'
+                    continue
                 model_[k] = self.models[id]['report'][k]
         return model_
 
