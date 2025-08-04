@@ -56,7 +56,7 @@ def _pairs_to_table(pairs):
     return Elm('table', tbody).set_attr('border', '1')
 
 
-def _to_picture(output_path, filename, emb=False, dpi=72):
+def _to_picture(output_path, filename, emb=False, dpi=100):
     kwargs = {'format': 'png', 'bbox_inches': 'tight', 'dpi': dpi}
     if emb:
         pic_io_bytes = io.BytesIO()
@@ -194,7 +194,7 @@ def _plot_prediction(
 
 def _plot_predictions(
     rp, model_names, true, preds, tsta, info, output_path, prefix,
-    diff=False, embed_image=False, dpi=72, max_n_graph=200,
+    diff=False, embed_image=False, dpi=100, max_n_graph=200,
 ):
     pred_len, n_channel = true.shape
     x = list(range(pred_len))
@@ -329,7 +329,7 @@ def _report_task(rp, conf, i_task, embed_image, dpi, max_n_graph):
         _report_task_eval(rp, conf, i_task, info, embed_image, dpi, max_n_graph)
 
 
-def report(conf_file, embed_image, dpi, max_n_graph=200):
+def report(conf_file, embed_image, dpi=100, max_n_graph=200):
     conf = Config.from_conf_file(conf_file)
     print('Embed image in report' if embed_image else 'Output image file separately')
     print(f'{dpi=}, {max_n_graph=}')

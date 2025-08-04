@@ -180,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--report_only', action='store_true')
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-i', '--separate_image', action='store_true')
-    parser.add_argument('--dpi', type=int, default=72)
+    parser.add_argument('--dpi', type=int, default=100)
     parser.add_argument('--max_n_graph', type=int, default=200)
     args = parser.parse_args()
     run(

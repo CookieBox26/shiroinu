@@ -92,54 +92,12 @@ train_range = [0.2, 0.8]
 valid_range = [0.6, 0.8]
 
 [[tasks]]
-task_type = "train"
-model = { id = 1, state_path = "" }
-task_template_id = 0
-n_epoch = 40
-n_epoch_ref = -1
-early_stop = true
-train_range = [0.2, 0.6]
-valid_range = [0.6, 0.8]
-
-[[tasks]]
-task_type = "train"
-model = { id = 1, state_path = "" }
-task_template_id = 0
-n_epoch = -1
-n_epoch_ref = 3
-early_stop = false
-train_range = [0.4, 0.8]
-valid_range = [0.6, 0.8]
-
-[[tasks]]
-task_type = "train"
-model = { id = 1, state_path = "" }
-task_template_id = 0
-n_epoch = 40
-n_epoch_ref = -1
-early_stop = true
-train_range = [0.4, 0.6]
-valid_range = [0.6, 0.8]
-
-[[tasks]]
-task_type = "train"
-model = { id = 1, state_path = "" }
-task_template_id = 0
-n_epoch = -1
-n_epoch_ref = 5
-early_stop = false
-train_range = [0.6, 0.8]
-valid_range = [0.6, 0.8]
-
-[[tasks]]
 task_type = "eval"
 valid_range = [0.8, 1.0]
 models = [
 { id = 0, state_path = "" },
 { id = 1, state_path = "<HERE>model_best_task_1.pth", note = "00-08" },
 { id = 1, state_path = "<HERE>model_best_task_2.pth", note = "02-08" },
-{ id = 1, state_path = "<HERE>model_best_task_4.pth", note = "04-08" },
-{ id = 1, state_path = "<HERE>model_best_task_6.pth", note = "06-08" },
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]
