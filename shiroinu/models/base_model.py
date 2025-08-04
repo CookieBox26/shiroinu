@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseModel(torch.nn.Module, ABC):
+    data_based_hyperparams = []
     def __init__(self):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

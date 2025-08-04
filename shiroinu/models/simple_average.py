@@ -57,6 +57,6 @@ class SimpleAverageTrainable(BaseSimpleAverage):
         w = torch.tensor([  # n_period, n_channel
             [decay_rate_**j for decay_rate_ in self.decay_rate]
             for j in reversed(range(n_period))
-        ], dtype=torch.float, device=self.device)
+        ], dtype=torch.float, device=self.device, requires_grad=True)
         w = w / w.sum(dim=0)
         return torch.einsum('jl,ijkl->ikl', (w, x_view))
