@@ -32,7 +32,7 @@ class SimpleAverage(BaseSimpleAverage):
         )
 
     def forward(self, x):
-        batch_size, _, _ = x.shape
+        batch_size, _, n_channel = x.shape
         #    batch_size, seq_len, n_channel
         # -> batch_size, n_period, period_len, n_channel
         x_view = x.view(batch_size, -1, self.period_len, n_channel)
