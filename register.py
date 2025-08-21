@@ -24,6 +24,8 @@ def main():
     ofile = open('docs/index.md', mode='w', encoding='utf-8', newline='\n')
     targets = [
         'outputs/sample_traffic_mini_0',
+        'outputs/sample_traffic_dlinear_0',
+        'outputs/sample_traffic_sa',
     ]
     for target in targets:
         file_0 = os.path.join(target, 'report.html')
