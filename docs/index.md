@@ -1,3 +1,4 @@
 - [sample_traffic_mini_0.html](sample_traffic_mini_0.html)
 - [sample_traffic_dlinear_0.html](sample_traffic_dlinear_0.html)
 - [sample_traffic_sa.html](sample_traffic_sa.html)
+- [sample_weather_mini_0.html](sample_weather_mini_0.html)
