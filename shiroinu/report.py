@@ -304,3 +304,6 @@ def report(conf_file, embed_image, dpi=100, max_n_graph=200):
     out_path = os.path.join(conf.log_dir, 'report.html')
     rp.output(out_path)
     print(out_path)
+
+    size = os.path.getsize(out_path) / (1024 * 1024)
+    print(f'{size:.2f} MB')
