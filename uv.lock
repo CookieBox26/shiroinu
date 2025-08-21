@@ -638,7 +638,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
     { name = "pandas" },
     { name = "pytest", marker = "extra == 'test'" },
-    { name = "shirotsubaki", specifier = ">=0.0.1a2" },
+    { name = "shirotsubaki", specifier = ">=0.0.1a3" },
     { name = "toml" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = "==2.6.0+cu124", index = "https://download.pytorch.org/whl/cu124" },
     { name = "torch", marker = "sys_platform == 'win32'", specifier = "==2.6.0", index = "https://download.pytorch.org/whl/cpu" },
@@ -647,14 +647,14 @@ provides-extras = ["test"]
 
 [[package]]
 name = "shirotsubaki"
-version = "0.0.1a2"
+version = "0.0.1a3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/b6/6046691754e953d85e774655fbda5274f6679677a44486be0f3a07a85514/shirotsubaki-0.0.1a2.tar.gz", hash = "sha256:66d6d236068235411dc754306db4aed7a4d0027706a8770da809e03c17e3c73b", size = 8122, upload-time = "2025-07-29T07:35:41.374Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/40/c5e3f1c413554ca825e4f1a59ea5e080fcb2bbf269278584bba7b8e48c0c/shirotsubaki-0.0.1a3.tar.gz", hash = "sha256:9caf3e4489ffc037b97f1df96e5d90fa3fff72987c4b8598fc3857d56a74b181", size = 11208, upload-time = "2025-08-21T05:18:36.112Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/ed/b05fe136848df3e611e9fc1c3a5c13c729cfbdb5cdcc3e2a32bc0b6a6877/shirotsubaki-0.0.1a2-py3-none-any.whl", hash = "sha256:5aa8a632c13c8cfdffeed2f201a35f4a226850e4206af50c9b33aacee426b6d0", size = 7409, upload-time = "2025-07-29T07:35:40.096Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/3f/bbe36655b29fa38bd01a159aee05b928dac68a71928b09d58ef44d30f858/shirotsubaki-0.0.1a3-py3-none-any.whl", hash = "sha256:55d8c17458be2825b25aa2cd24a470e7b3fb0950e1562d3a8668b7474cdbde5c", size = 8447, upload-time = "2025-08-21T05:18:34.724Z" },
 ]
 
 [[package]]
