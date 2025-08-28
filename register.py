@@ -1,14 +1,18 @@
 import base64
 import os
 import re
+import shirotsubaki.report
+from shirotsubaki.element import Element as Elm
+from bs4 import BeautifulSoup
+from pathlib import Path
 
 
-def copy(target, file_0, file_1):
+def _copy(target, file_0, file_1):
     with (
-        open(file_0, mode='r') as ifile, 
+        open(file_0, mode='r', encoding='utf-8') as ifile, 
         open(file_1, mode='w', encoding='utf-8', newline='\n') as ofile,
     ):
-        for line in ifile:
+        for i, line in enumerate(ifile):
             match = re.search(r'<img src="((?!data:)[^"]+\.png)"', line)
             if not match:
                 ofile.write(line)
@@ -20,24 +24,69 @@ def copy(target, file_0, file_1):
             ofile.write(line_)
 
 
+def _get_path(target):
+    return (
+        os.path.basename(target),
+        os.path.join(target, 'report.html'),
+        os.path.basename(target) + '.html',
+        os.path.join('docs/', os.path.basename(target) + '.html')
+    )
+
+
+def _to_a(base, file_1):
+    a = Elm('a', base).set_attr('href', file_1)
+    return a.set_attr('target', '_blank').set_attr('rel', 'noopener noreferrer')
+
+
 def main():
-    ofile = open('docs/index.md', mode='w', encoding='utf-8', newline='\n')
-    targets = [
-        'outputs/sample_traffic_mini_0',
-        'outputs/sample_traffic_dlinear_0',
-        'outputs/sample_traffic_sa',
-        'outputs/sample_weather_mini_0',
-    ]
-    for target in targets:
-        file_0 = os.path.join(target, 'report.html')
-        file_1 = os.path.basename(target) + '.html'
-        path_1 = os.path.join('docs/', file_1)
-        if os.path.isfile(file_0):
-            copy(target, file_0, path_1)
-        elif not os.path.isfile(path_1):
-            assert False, 'No such file: ' + file_0
-        ofile.write(f'- [{file_1}]({file_1})\n')
-    ofile.close()
+    targets = {
+        'Traffic': [
+            'outputs/sample_traffic_sa',
+            'outputs/sample_traffic_dlinear_0',
+        ],
+        'Weather': [
+            'outputs/sample_weather_sa',
+        ],
+        'For Debugging': [
+            'outputs/sample_traffic_mini_0',
+        ],
+    }
+
+    for k, v in targets.items():
+        for target in v:
+            _, file_0, file_1, path_1 = _get_path(target)
+            if os.path.isfile(file_0):
+                _copy(target, file_0, path_1)
+            elif not os.path.isfile(path_1):
+                assert False, 'No such file: ' + file_0
+
+    rp = shirotsubaki.report.Report()
+    rp.style.set('ul', 'margin', '0')
+    rp.style.set('ul', 'padding-left', '2em')
+    rp.style.set('th, td', 'vertical-align', 'top')
+
+    for k, v in targets.items():
+        rp.append(Elm('h2', k))
+        ul = Elm('ul')
+        for target in v:
+            base, _, file_1, _ = _get_path(target)
+            ul.append(Elm('li', _to_a(base, file_1)))
+        rp.append(ul)
+    rp.append(Elm('br'))
+    rp.append(Elm('hr'))
+
+    for k, v in targets.items():
+        rp.append(Elm('h2', k))
+        for target in v:
+            base, _, file_1, path_1 = _get_path(target)
+            text = Path(path_1).read_text(encoding='utf-8')
+            soup = BeautifulSoup(text, 'html.parser')
+            node = soup.select_one('#summary')
+            if node:
+                rp.append(Elm('h3', _to_a(base, file_1)))
+                rp.append(''.join(str(c) for c in node.contents))
+
+    rp.output('docs/index.html')
 
 
 if __name__ == '__main__':

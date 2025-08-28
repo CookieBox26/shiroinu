@@ -2,6 +2,7 @@ import toml
 import os
 import math
 import datetime
+from copy import deepcopy
 from types import SimpleNamespace
 
 
@@ -40,18 +41,21 @@ class Config:
         self.tasks = [SimpleNamespace(**task) for task in d['tasks']]
 
     def get_model(self, id, state_path='', note='', for_report=False):
-        model_ = {k: self.models[id][k] for k in ['path', 'params']}
+        src = deepcopy(self.models[id])
+        model_ = {k: src[k] for k in ['path', 'params']}
         if state_path != '':
             if '<HERE>' in state_path:
                 state_path = state_path.replace('<HERE>', self.log_dir)
             model_['params']['state_path'] = state_path
-        if for_report and ('report' in self.models[id]):
-            for k in self.models[id]['report']:
-                if (k == 'name') and (note != ''):
-                    model_[k] = self.models[id]['report'][k] + f' [{note}]'
-                    continue
-                model_[k] = self.models[id]['report'][k]
+        if for_report and ('report' in src):
+            for k, v in src['report'].items():
+                model_[k] = (f'{v} [{note}]' if k == 'name' and note else v)
+            if 'name' not in model_:
+                model_['name'] = f'model_{id}'
         return model_
+
+    def log_dir_path(self, filename):
+        return os.path.join(self.log_dir, filename)
 
     def __init__(self, d):
         fields_required = [

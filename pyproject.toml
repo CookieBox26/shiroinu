@@ -15,8 +15,9 @@ dependencies = [
     "torch==2.6.0+cu124; sys_platform == 'linux'",
     "torch==2.6.0; sys_platform == 'win32'",
     "pandas",
-    "shirotsubaki>=0.0.1a3",
+    "shirotsubaki>=0.0.1a7",
     "matplotlib",
+    "beautifulsoup4",
 ]
 
 [[tool.uv.index]]
