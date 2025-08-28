@@ -96,8 +96,8 @@ Traffic
 </h2>
 
 <h3>
-<a href="sample_traffic_sa.html" target="_blank" rel="noopener noreferrer">
-sample_traffic_sa
+<a href="sample_traffic_dlinear_0.html" target="_blank" rel="noopener noreferrer">
+sample_traffic_dlinear_0
 </a>
 </h3>
 
@@ -162,7 +162,147 @@ loss_valid
 <tbody>
 <tr>
 <th>
-task_0: eval
+task_0: train
+</th>
+<td>
+[0.0, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.36625
+</td>
+</tr>
+<tr>
+<th>
+task_1: train
+</th>
+<td>
+[0.0, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35096
+</td>
+</tr>
+<tr>
+<th>
+task_2: train
+</th>
+<td>
+[0.2, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35190
+</td>
+</tr>
+<tr>
+<th>
+task_3: train
+</th>
+<td>
+[0.2, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.38252
+</td>
+</tr>
+<tr>
+<th>
+task_4: train
+</th>
+<td>
+[0.4, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35266
+</td>
+</tr>
+<tr>
+<th>
+task_5: train
+</th>
+<td>
+[0.4, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.41250
+</td>
+</tr>
+<tr>
+<th>
+task_6: train
+</th>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.33690
+</td>
+</tr>
+<tr>
+<th>
+task_7: eval
 </th>
 <td>
 </td>
@@ -173,10 +313,10 @@ task_0: eval
 shiroinu.criteria.MAELoss {}
 </td>
 <td>
-SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
+SA<br/>DLI [00-08]<br/>DLI [02-08]<br/>DLI [04-08]<br/>DLI [06-08]
 </td>
 <td>
-0.01201<br/>0.01195<br/>0.01191<br/>0.01189<br/>0.01191<br/>0.01198
+0.01201<br/>0.01206<br/>0.01211<br/>0.01238<br/>0.01293
 </td>
 </tr>
 </tbody>
