@@ -96,6 +96,93 @@ Traffic
 </h2>
 
 <h3>
+<a href="sample_traffic_sa.html" target="_blank" rel="noopener noreferrer">
+sample_traffic_sa
+</a>
+</h3>
+
+
+<table style="max-width: 720px;">
+<tbody>
+<tr>
+<th>
+data path
+</th>
+<td>
+~/dataset/traffic/traffic.csv
+</td>
+</tr>
+<tr>
+<th>
+white_list
+</th>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+seq_len
+</th>
+<td>
+672
+</td>
+</tr>
+<tr>
+<th>
+pred_len
+</th>
+<td>
+168
+</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>
+</th>
+<th>
+train_range
+</th>
+<th>
+valid_range
+</th>
+<th>
+criterion
+</th>
+<th>
+model
+</th>
+<th>
+loss_valid
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+task_0: eval
+</th>
+<td>
+</td>
+<td>
+[0.8, 1.0]
+</td>
+<td>
+shiroinu.criteria.MAELoss {}
+</td>
+<td>
+SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
+</td>
+<td>
+0.01201<br/>0.01195<br/>0.01191<br/>0.01189<br/>0.01191<br/>0.01198
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3>
 <a href="sample_traffic_dlinear_0.html" target="_blank" rel="noopener noreferrer">
 sample_traffic_dlinear_0
 </a>
