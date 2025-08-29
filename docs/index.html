@@ -187,6 +187,233 @@ SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
 </tbody>
 </table>
 
+<h3>
+<a href="sample_traffic_dlinear_0.html" target="_blank" rel="noopener noreferrer">
+sample_traffic_dlinear_0
+</a>
+</h3>
+
+
+<table style="max-width: 720px;">
+<tbody>
+<tr>
+<th>
+data path
+</th>
+<td>
+~/dataset/traffic/traffic.csv
+</td>
+</tr>
+<tr>
+<th>
+white_list
+</th>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+seq_len
+</th>
+<td>
+672
+</td>
+</tr>
+<tr>
+<th>
+pred_len
+</th>
+<td>
+168
+</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>
+</th>
+<th>
+train_range
+</th>
+<th>
+valid_range
+</th>
+<th>
+criterion
+</th>
+<th>
+model
+</th>
+<th>
+loss_valid
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+task_0: train
+</th>
+<td>
+[0.0, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.36625
+</td>
+</tr>
+<tr>
+<th>
+task_1: train
+</th>
+<td>
+[0.0, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35096
+</td>
+</tr>
+<tr>
+<th>
+task_2: train
+</th>
+<td>
+[0.2, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35190
+</td>
+</tr>
+<tr>
+<th>
+task_3: train
+</th>
+<td>
+[0.2, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.38252
+</td>
+</tr>
+<tr>
+<th>
+task_4: train
+</th>
+<td>
+[0.4, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.35266
+</td>
+</tr>
+<tr>
+<th>
+task_5: train
+</th>
+<td>
+[0.4, 0.6]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.41250
+</td>
+</tr>
+<tr>
+<th>
+task_6: train
+</th>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+[0.6, 0.8]
+</td>
+<td>
+torch.nn.MSELoss {}
+</td>
+<td>
+dlinear.DLinearIqr
+</td>
+<td>
+0.33690
+</td>
+</tr>
+<tr>
+<th>
+task_7: eval
+</th>
+<td>
+</td>
+<td>
+[0.8, 1.0]
+</td>
+<td>
+shiroinu.criteria.MAELoss {}
+</td>
+<td>
+SA<br/>DLI [00-08]<br/>DLI [02-08]<br/>DLI [04-08]<br/>DLI [06-08]
+</td>
+<td>
+0.01201<br/>0.01206<br/>0.01211<br/>0.01238<br/>0.01293
+</td>
+</tr>
+</tbody>
+</table>
+
 <h2>
 Weather
 </h2>
