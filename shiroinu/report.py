@@ -17,7 +17,9 @@ plt.rcParams['font.family'] = 'Verdana'
 plt.rcParams['font.size'] = 11
 
 
-def module_to_str(module):
+def module_to_str(module, newline=False):
+    if newline and len(module['params']) > 0:
+        return f'{module["path"]}<br/>{module["params"]}'
     return f'{module["path"]} {module["params"]}'
 
 
@@ -309,7 +311,7 @@ class ReportWriter:
             ['pred_len', self.conf.data['pred_len']],
         ], index=True).set_attr('style', 'max-width: 720px;')
         elm.append(tbl)
-        rows = [['', 'train_range', 'valid_range', 'criterion', 'model', 'loss_valid']]
+        rows = [['', 'train_range', 'valid_range', 'criterion', 'model', 'n_epoch', 'loss_valid']]
         for i_task in range(len(self.conf.tasks)):
             tie = TaskInfoExtractor(self.conf, i_task)
             crit_key = 'criterion_' + ('target' if (tie.task.task_type) == 'train' else 'eval')
@@ -329,8 +331,9 @@ class ReportWriter:
                 tie.name,
                 getattr(tie.task, 'train_range', ''),
                 getattr(tie.task, 'valid_range'),
-                module_to_str(getattr(tie.task, crit_key)),
+                module_to_str(getattr(tie.task, crit_key), newline=True),
                 model,
+                '' if tie.task.task_type == 'eval' else str(tie.info['epoch_id_best']),
                 loss,
             ])
         elm.append(Elm.table_from_rows(rows, index=True, header=True))
