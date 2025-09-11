@@ -44,17 +44,24 @@ class TaskInfoExtractor:
         self.info = None if (not os.path.isfile(log_path)) else toml.load(log_path)
 
         if self.task.task_type == 'train':
-            self.model_setting = self.conf.get_model(**self.task.model)
-            self.is_target_criteria_0 = (
-                (self.task.criterion_target['path'] == self.conf.criteria[0]['path'])
-                and (self.task.criterion_target['params'] == self.conf.criteria[0]['params'])
-            )
+            self.model_setting = self.conf.get_model_for_report_from_task(self.task)
         if self.task.task_type == 'eval':
             self.n_model = len(self.task.models)
+            models = []
+            seen = {}
+            for i_model in range(self.n_model):
+                model = self.conf.get_model_for_report(**self.task.models[i_model])
+                if model['name'] not in seen:
+                    seen[model['name']] = []
+                seen[model['name']].append(i_model)
+                models.append(model)
             self.model_rows = []
             self.model_names = []
             for i_model in range(self.n_model):
-                model = self.conf.get_model(for_report=True, **self.task.models[i_model])
+                model = models[i_model]
+                if len(seen[model['name']]) > 1:
+                    i_model_ = seen[model['name']].index(i_model)
+                    model['name'] = model['name'] + f'({i_model_})'
                 self.model_rows.append([model['name'], self.model_to_elm(model)])
                 self.model_names.append(model['name'])
 
@@ -82,7 +89,6 @@ class TaskInfoExtractor:
     def get_task_train_conf(self):
         rows = [
             ['criterion_target', module_to_str(self.task.criterion_target)],
-            *[[f'criteria {i}', module_to_str(c)] for i, c in enumerate(self.conf.criteria)],
             *[[f'{tp}_range', getattr(self.task, f'{tp}_range')] for tp in ['train', 'valid']],
             ['model_path', self.model_setting['path']],
             ['model_params', self.model_setting['params']],
@@ -111,7 +117,7 @@ class TaskInfoExtractor:
         i_epoch = self.info['epoch_id_best']
         rows = [
             ['epoch_id_best', i_epoch],
-            ['loss_valid_best', self.info['epochs'][i_epoch]['loss_0_per_sample_valid']],
+            ['loss_valid_best', self.info['epochs'][i_epoch]['loss_per_sample_valid']],
         ]
         return Elm.table_from_rows(rows, index=True)
 
@@ -137,7 +143,7 @@ class TaskInfoExtractor:
             d[col] = '' if (col == 'cols_org') else df_[col].mean()
         df_ = pd.concat([pd.DataFrame(d, index=['mean']), df_])
         for i_model in range(1, self.n_model):
-            df_[f'{self.model_names[0]}-{self.model_names[i_model]}'] \
+            df_[f'{self.model_names[0]}<br/>-{self.model_names[i_model]}'] \
                 = df_[self.model_names[0]] - df_[self.model_names[i_model]]
         return df_
 
@@ -231,24 +237,24 @@ class ReportWriter:
         self.append(tie.get_task_train_conf())
         for type_ in ['train', 'valid']:
             key = f'data_{type_}'
+            if key not in tie.info:
+                continue
             self.append(Elm('h3', key))
             self.append(tie.get_windows(key))
             if type_ == 'train':
                 self.rp.append_as_toggle(f'{tie.id}_{key}_channels', tie.get_channels(key))
-        self.append(tie.get_loss_valid_best())
+        if 'epoch_id_best' in tie.info:
+            self.append(tie.get_loss_valid_best())
 
-        for i_crit, crit in enumerate(self.conf.criteria):
-            if i_crit == 0:
-                if tie.is_target_criteria_0:
-                    fig = tie.plot_loss_graph(
-                        ['loss_0_per_sample_train', 'loss_0_per_sample_valid'],
-                        tie.task.criterion_target['path'])
-                    self.append_figure(fig, f'img/{tie.id}_loss_train_valid.svg')
-                    continue
-                fig = tie.plot_loss_graph(['loss_0_per_sample_train'], tie.task.criterion_target['path'])
-                self.append_figure(fig, f'img/{tie.id}_loss_train.svg')
-            fig = tie.plot_loss_graph([f'loss_{i_crit}_per_sample_valid'], crit['path'])
-            self.append_figure(fig, f'img/{tie.id}_loss_{i_crit}_valid.svg')
+        if ('loss_per_sample_valid' in tie.info['epochs'][0]):
+            fig = tie.plot_loss_graph(
+                ['loss_per_sample_train', 'loss_per_sample_valid'],
+                tie.task.criterion_target['path'],
+            )
+            self.append_figure(fig, f'img/{tie.id}_loss_train_valid.svg')
+        else:
+            fig = tie.plot_loss_graph(['loss_per_sample_train'], tie.task.criterion_target['path'])
+            self.append_figure(fig, f'img/{tie.id}_loss_train.svg')
 
     def _report_task_eval(self, tie):
         self.append(tie.get_task_eval_conf())
@@ -299,10 +305,7 @@ class ReportWriter:
         elm = Elm('div').set_attr('id', 'summary')
         wl = self.conf.data.get('white_list', '')
         if wl != '':
-            if isinstance(wl, list):
-                count = len(wl)
-            else:
-                count = len(wl.split(','))
+            count = len(wl) if isinstance(wl, list) else len(wl.split(','))
             wl = f'count: {count}<br/>{wl}'
         tbl = Elm.table_from_rows([
             ['data path', self.conf.data['path'].replace(os.path.expanduser('~/'), '~/')],
@@ -311,31 +314,39 @@ class ReportWriter:
             ['pred_len', self.conf.data['pred_len']],
         ], index=True).set_attr('style', 'max-width: 720px;')
         elm.append(tbl)
-        rows = [['', 'train_range', 'valid_range', 'criterion', 'model', 'n_epoch', 'loss_valid']]
+        rows = [['', 'train_range', 'valid_range', 'criterion', 'model', 'i_epoch', 'loss_valid']]
         for i_task in range(len(self.conf.tasks)):
             tie = TaskInfoExtractor(self.conf, i_task)
-            crit_key = 'criterion_' + ('target' if (tie.task.task_type) == 'train' else 'eval')
-            model = ''
+            row = [
+                tie.name,
+                getattr(tie.task, 'train_range', ''),
+                getattr(tie.task, 'valid_range', '') or '',
+            ]
             if tie.task.task_type == 'train':
-                model = tie.model_setting['path'].replace('shiroinu.models.', '')
-            else:
-                model = '<br/>'.join(tie.model_names)
-            loss = ''
-            if tie.task.task_type == 'train':
-                loss_ = tie.info['epochs'][tie.info['epoch_id_best']]['loss_0_per_sample_valid']
-                loss = f'{loss_:.5f}'
+                i_epoch = ''
+                loss = ''
+                if 'epoch_id_best' in tie.info:
+                    i_epoch = str(tie.info['epoch_id_best']) + ' (best)<br/>'
+                    loss_ = tie.info['epochs'][tie.info['epoch_id_best']]['loss_per_sample_valid']
+                    loss = f'{loss_:.5f}'
+                if 'epoch_id_end' in tie.info:
+                    i_epoch += str(tie.info['epoch_id_end']) + ' (end)'
+                row += [
+                    module_to_str(getattr(tie.task, 'criterion_target'), newline=True),
+                    tie.model_setting['name'],
+                    i_epoch,
+                    loss,
+                ]
             else:
                 losses = tie.get_df_loss_per_sample().iloc[0]
                 loss = '<br/>'.join([f'{losses[model_name]:.5f}' for model_name in tie.model_names])
-            rows.append([
-                tie.name,
-                getattr(tie.task, 'train_range', ''),
-                getattr(tie.task, 'valid_range'),
-                module_to_str(getattr(tie.task, crit_key), newline=True),
-                model,
-                '' if tie.task.task_type == 'eval' else str(tie.info['epoch_id_best']),
-                loss,
-            ])
+                row += [
+                    module_to_str(getattr(tie.task, 'criterion_eval'), newline=True),
+                    '<br/>'.join(tie.model_names),
+                    '',
+                    loss,
+                ]
+            rows.append(row)
         elm.append(Elm.table_from_rows(rows, index=True, header=True))
         self.append(elm)
 

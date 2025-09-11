@@ -48,8 +48,20 @@ uv run python run.py configs/sample_traffic_mini_0.toml
 ```
 
 The outputs will be generated under `outputs/sample_traffic_mini_0/`.  
-A report will be saved as `report.html`.
+A report will be saved as `outputs/sample_traffic_mini_0/report.html`.
 
+You can also specify the following options:
+
+- `-s 0,1` : Skip tasks 0 and 1
+- `-r` : Generate the report without running any tasks
+- `-c` : Clear the log directory if it already exists
+- `-q` : Suppress output to stdout
+- `-i` : Do not embed graph images in the report (default: embedded)
+- `-f png` : Set the format of graph images in the report to PNG (default: SVG)
+- `--dpi 64` : Specify the resolution of graph images in the report (effective only when using PNG)
+    - For example, `-f png --dpi 64` reduces the report file size, though the graphs will be lower quality.
+- `--max_n_graph 20` : Limit the number of graph images in the report to 20 (default: 1000)
+    - For tasks with `task_type = valid`, the number of graphs is `ceil(n_channel / 5)`, so reducing this upper limit can help decrease report generation time and file size.
 
 ### Note
 

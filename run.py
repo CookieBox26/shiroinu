@@ -28,21 +28,24 @@ def run_task_valid(data_loader, criterion, model):
     return loss_total / data_loader.dataset.n_sample
 
 
-def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
+def run_task(conf, logger, dm, model, task, batch_size_eval):
     data_loader_train = dm.get_data_loader(
         logger=logger,
         data_range=task.train_range,
         batch_sampler=load_class(task.batch_sampler.path),
         batch_sampler_kwargs=task.batch_sampler.params,
     )
-    data_loader_valid = dm.get_data_loader(
-        logger=logger,
-        data_range=task.valid_range,
-        batch_sampler=BatchSampler,
-        batch_sampler_kwargs={'batch_size': batch_size_eval},
-    )
     logger.add_info('data_train', data_loader_train.dataset.get_info_for_logger())
-    logger.add_info('data_valid', data_loader_valid.dataset.get_info_for_logger())
+
+    data_loader_valid = None
+    if task.valid_range is not None:
+        data_loader_valid = dm.get_data_loader(
+            logger=logger,
+            data_range=task.valid_range,
+            batch_sampler=BatchSampler,
+            batch_sampler_kwargs={'batch_size': batch_size_eval},
+        )
+        logger.add_info('data_valid', data_loader_valid.dataset.get_info_for_logger())
 
     if (model is None) or task.reset_model:
         fix_seed()
@@ -52,6 +55,7 @@ def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
             f'{model.__class__.__name__}({model.count_trainable_parameters()}) '
             f'loaded to {model.device}'
         )
+
     criterion_target = load_instance(**task.criterion_target)
     cls_optimizer = load_class(task.optimizer.path)
     optimizer = cls_optimizer(model.parameters(), **task.optimizer.params)
@@ -67,27 +71,31 @@ def run_task(conf, logger, dm, criteria, model, task, batch_size_eval):
     if task.n_epoch_ref > -1:
         print(f'Reuse the best epoch count from task {task.n_epoch_ref}')
         n_epoch_ = logger.d_epoch_id_best[task.n_epoch_ref] + 1
+
     for i_epoch in range(n_epoch_):
         logger.start_epoch()
         logger.add_info_epoch('learning_rate', optimizer.param_groups[0]['lr'])
         loss_train = run_task_train(data_loader_train, criterion_target, model, optimizer)
-        logger.add_info_epoch('loss_0_per_sample_train', loss_train)
+        logger.add_info_epoch('loss_per_sample_train', loss_train)
         if lr_scheduler is not None:
             lr_scheduler.step()
-        for i_criterion, criterion in enumerate(criteria):
-            loss_valid = run_task_valid(data_loader_valid, criterion, model)
-            logger.add_info_epoch(f'loss_{i_criterion}_per_sample_valid', loss_valid)
-            if i_criterion == 0:
-                if loss_valid < loss_valid_best:
-                    logger.save_model(model)
-                    loss_valid_best = loss_valid
-                    early_stop_counter = 0
-                else:
-                    early_stop_counter += 1
-                if (task.early_stop) and (early_stop_counter >= 5):
-                    stop = True
+        if data_loader_valid is None:
+            continue
+
+        loss_valid = run_task_valid(data_loader_valid, criterion_target, model)
+        logger.add_info_epoch(f'loss_per_sample_valid', loss_valid)
+        if loss_valid < loss_valid_best:
+            logger.save_model(model, suffix='_best')
+            loss_valid_best = loss_valid
+            early_stop_counter = 0
+        else:
+            early_stop_counter += 1
+        if (task.early_stop) and (early_stop_counter >= 5):
+            stop = True
         if stop:
             break
+
+    logger.save_model(model, suffix='_end')
     return model
 
 
@@ -145,11 +153,6 @@ def run_task_eval(conf, logger, dm, task, batch_size_eval):
 
 def run_tasks(conf, logger, li_skip_task_id):
     dm = TSDataManager(**conf.data)
-
-    criteria = []
-    for criterion in conf.criteria:
-        criteria.append(load_instance(**criterion))
-
     model = None
     for i_task, task in enumerate(conf.tasks):
         if i_task in li_skip_task_id:
@@ -158,21 +161,31 @@ def run_tasks(conf, logger, li_skip_task_id):
 
         logger.start_task()
         if task.task_type == 'train':
-            model = run_task(conf, logger, dm, criteria, model, task, conf.batch_size_eval)
+            model = run_task(conf, logger, dm, model, task, conf.batch_size_eval)
         if task.task_type == 'eval':
             run_task_eval(conf, logger, dm, task, conf.batch_size_eval)
         logger.end_task()
 
 
-def run(conf_file, skip_task_ids, report_only, quiet, fmt, separate_image, dpi, max_n_graph):
-    conf, logger = get_conf_and_logger(conf_file)
+def run(
+    conf_file,
+    skip_task_ids,
+    report_only,
+    clear_logs,
+    quiet,
+    image_format,
+    separate_image,
+    dpi,
+    max_n_graph,
+):
+    conf, logger = get_conf_and_logger(conf_file, clear_logs)
     logger.print_epoch = (not quiet)
     li_skip_task_id = [int(i) for i in skip_task_ids.split(',') if i != '']
     if not report_only:
         run_tasks(conf, logger, li_skip_task_id)
     ReportWriter.create(
         conf_file,
-        image_format=fmt,
+        image_format=image_format,
         embed_image=(not separate_image),
         dpi=dpi,
         max_n_graph=max_n_graph,
@@ -184,6 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('conf_file')
     parser.add_argument('-s', '--skip_task_ids', type=str, default='')
     parser.add_argument('-r', '--report_only', action='store_true')
+    parser.add_argument('-c', '--clear_logs', action='store_true')
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-f', '--image_format', type=str, default='svg')
     parser.add_argument('-i', '--separate_image', action='store_true')
@@ -194,6 +208,7 @@ if __name__ == '__main__':
         args.conf_file,
         args.skip_task_ids,
         args.report_only,
+        args.clear_logs,
         args.quiet,
         args.image_format,
         args.separate_image,

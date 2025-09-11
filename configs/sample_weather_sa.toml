@@ -40,7 +40,7 @@ seq_len = [6, 24, 4]
 pred_len = [6, 24]
 period_len = [6, 24]
 [models.report]
-name = "SA"
+name = "SimpleAve"
 
 [[models]]
 path = "shiroinu.models.simple_average.SimpleAverage"
@@ -50,7 +50,7 @@ pred_len = [6, 24]
 period_len = [6, 24]
 decay_rate = 0.9
 [models.report]
-name = "SA09"
+name = "SimpleAve09"
 
 [[models]]
 path = "shiroinu.models.simple_average.SimpleAverage"
@@ -60,7 +60,7 @@ pred_len = [6, 24]
 period_len = [6, 24]
 decay_rate = 0.8
 [models.report]
-name = "SA08"
+name = "SimpleAve08"
 
 [[models]]
 path = "shiroinu.models.simple_average.SimpleAverage"
@@ -70,7 +70,7 @@ pred_len = [6, 24]
 period_len = [6, 24]
 decay_rate = 0.7
 [models.report]
-name = "SA07"
+name = "SimpleAve07"
 
 [[models]]
 path = "shiroinu.models.simple_average.SimpleAverage"
@@ -80,7 +80,7 @@ pred_len = [6, 24]
 period_len = [6, 24]
 decay_rate = 0.6
 [models.report]
-name = "SA06"
+name = "SimpleAve06"
 
 [[models]]
 path = "shiroinu.models.simple_average.SimpleAverage"
@@ -90,7 +90,7 @@ pred_len = [6, 24]
 period_len = [6, 24]
 decay_rate = 0.5
 [models.report]
-name = "SA05"
+name = "SimpleAve05"
 
 # -------------------- tasks --------------------
 

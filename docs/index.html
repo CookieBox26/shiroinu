@@ -50,12 +50,12 @@ Traffic
 
 <ul>
 <li>
-<a href="sample_traffic_sa.html" target="_blank" rel="noopener noreferrer">
+<a href="#sample_traffic_sa">
 sample_traffic_sa
 </a>
 </li>
 <li>
-<a href="sample_traffic_dlinear_0.html" target="_blank" rel="noopener noreferrer">
+<a href="#sample_traffic_dlinear_0">
 sample_traffic_dlinear_0
 </a>
 </li>
@@ -67,7 +67,7 @@ Weather
 
 <ul>
 <li>
-<a href="sample_weather_sa.html" target="_blank" rel="noopener noreferrer">
+<a href="#sample_weather_sa">
 sample_weather_sa
 </a>
 </li>
@@ -79,12 +79,12 @@ For Debugging
 
 <ul>
 <li>
-<a href="sample_traffic_mini_0.html" target="_blank" rel="noopener noreferrer">
+<a href="#sample_traffic_mini_0">
 sample_traffic_mini_0
 </a>
 </li>
 <li>
-<a href="sample_traffic_mini_1.html" target="_blank" rel="noopener noreferrer">
+<a href="#sample_traffic_mini_1">
 sample_traffic_mini_1
 </a>
 </li>
@@ -100,7 +100,7 @@ sample_traffic_mini_1
 Traffic
 </h2>
 
-<h3>
+<h3 id="sample_traffic_sa">
 <a href="sample_traffic_sa.html" target="_blank" rel="noopener noreferrer">
 sample_traffic_sa
 </a>
@@ -187,7 +187,7 @@ SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
 </tbody>
 </table>
 
-<h3>
+<h3 id="sample_traffic_dlinear_0">
 <a href="sample_traffic_dlinear_0.html" target="_blank" rel="noopener noreferrer">
 sample_traffic_dlinear_0
 </a>
@@ -418,7 +418,7 @@ SA<br/>DLI [00-08]<br/>DLI [02-08]<br/>DLI [04-08]<br/>DLI [06-08]
 Weather
 </h2>
 
-<h3>
+<h3 id="sample_weather_sa">
 <a href="sample_weather_sa.html" target="_blank" rel="noopener noreferrer">
 sample_weather_sa
 </a>
@@ -479,6 +479,9 @@ criterion
 model
 </th>
 <th>
+i_epoch
+</th>
+<th>
 loss_valid
 </th>
 </tr>
@@ -497,7 +500,9 @@ task_0: eval
 shiroinu.criteria.MAELoss {}
 </td>
 <td>
-SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
+SimpleAve<br/>SimpleAve09<br/>SimpleAve08<br/>SimpleAve07<br/>SimpleAve06<br/>SimpleAve05
+</td>
+<td>
 </td>
 <td>
 16.18782<br/>16.11657<br/>16.07599<br/>16.07295<br/>16.12420<br/>16.24501
@@ -510,7 +515,7 @@ SA<br/>SA09<br/>SA08<br/>SA07<br/>SA06<br/>SA05
 For Debugging
 </h2>
 
-<h3>
+<h3 id="sample_traffic_mini_0">
 <a href="sample_traffic_mini_0.html" target="_blank" rel="noopener noreferrer">
 sample_traffic_mini_0
 </a>
@@ -571,6 +576,9 @@ criterion
 model
 </th>
 <th>
+i_epoch
+</th>
+<th>
 loss_valid
 </th>
 </tr>
@@ -581,19 +589,22 @@ loss_valid
 task_0: train
 </th>
 <td>
-[0.0, 0.6]
+[0.0, 0.3]
 </td>
 <td>
-[0.6, 0.8]
+[0.3, 0.4]
 </td>
 <td>
-torch.nn.MSELoss {}
+shiroinu.criteria.MSELoss {}
 </td>
 <td>
-dlinear.DLinearIqr
+DLinearIqr
 </td>
 <td>
-0.34525
+11 (best)<br/>16 (end)
+</td>
+<td>
+0.47068
 </td>
 </tr>
 <tr>
@@ -601,19 +612,20 @@ dlinear.DLinearIqr
 task_1: train
 </th>
 <td>
-[0.0, 0.8]
+[0.0, 0.4]
 </td>
 <td>
-[0.6, 0.8]
 </td>
 <td>
-torch.nn.MSELoss {}
+shiroinu.criteria.MSELoss {}
 </td>
 <td>
-dlinear.DLinearIqr
+DLinearIqr [no decay]
 </td>
 <td>
-0.33251
+11 (end)
+</td>
+<td>
 </td>
 </tr>
 <tr>
@@ -621,44 +633,70 @@ dlinear.DLinearIqr
 task_2: train
 </th>
 <td>
-[0.2, 0.8]
+[0.0, 0.3]
 </td>
 <td>
-[0.6, 0.8]
+[0.3, 0.4]
 </td>
 <td>
-torch.nn.MSELoss {}
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.9}
 </td>
 <td>
-dlinear.DLinearIqr
+DLinearIqr
 </td>
 <td>
-0.32971
+11 (best)<br/>16 (end)
+</td>
+<td>
+0.41677
 </td>
 </tr>
 <tr>
 <th>
-task_3: eval
+task_3: train
+</th>
+<td>
+[0.0, 0.4]
+</td>
+<td>
+</td>
+<td>
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.9}
+</td>
+<td>
+DLinearIqr [decay 0.9]
+</td>
+<td>
+11 (end)
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+task_4: eval
 </th>
 <td>
 </td>
 <td>
-[0.8, 1.0]
+[0.4, 0.5]
 </td>
 <td>
 shiroinu.criteria.MAELoss {}
 </td>
 <td>
-SA<br/>DLI [00-08]<br/>DLI [02-08]
+SimpleAve<br/>DLinearIqr [no decay]<br/>DLinearIqr [decay 0.9]
 </td>
 <td>
-0.01434<br/>0.01484<br/>0.01502
+</td>
+<td>
+0.01583<br/>0.01673<br/>0.01735
 </td>
 </tr>
 </tbody>
 </table>
 
-<h3>
+<h3 id="sample_traffic_mini_1">
 <a href="sample_traffic_mini_1.html" target="_blank" rel="noopener noreferrer">
 sample_traffic_mini_1
 </a>
@@ -719,7 +757,7 @@ criterion
 model
 </th>
 <th>
-n_epoch
+i_epoch
 </th>
 <th>
 loss_valid
@@ -732,22 +770,22 @@ loss_valid
 task_0: train
 </th>
 <td>
-[0.0, 0.6]
+[0.0, 0.3]
 </td>
 <td>
-[0.6, 0.8]
+[0.3, 0.4]
 </td>
 <td>
 shiroinu.criteria.MSELoss {}
 </td>
 <td>
-simple_average.SimpleAverageTrainable
+SimpleAveT
 </td>
 <td>
-3
+22 (best)<br/>27 (end)
 </td>
 <td>
-0.00080
+0.00095
 </td>
 </tr>
 <tr>
@@ -755,22 +793,20 @@ simple_average.SimpleAverageTrainable
 task_1: train
 </th>
 <td>
-[0.0, 0.8]
+[0.0, 0.4]
 </td>
 <td>
-[0.6, 0.8]
 </td>
 <td>
 shiroinu.criteria.MSELoss {}
 </td>
 <td>
-simple_average.SimpleAverageTrainable
+SimpleAveT [no decay]
 </td>
 <td>
-2
+22 (end)
 </td>
 <td>
-0.00080
 </td>
 </tr>
 <tr>
@@ -778,22 +814,22 @@ simple_average.SimpleAverageTrainable
 task_2: train
 </th>
 <td>
-[0.0, 0.6]
+[0.0, 0.3]
 </td>
 <td>
-[0.6, 0.8]
+[0.3, 0.4]
 </td>
 <td>
-shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.9}
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.7}
 </td>
 <td>
-simple_average.SimpleAverageTrainable
+SimpleAveT
 </td>
 <td>
-15
+27 (best)<br/>32 (end)
 </td>
 <td>
-0.00080
+0.00089
 </td>
 </tr>
 <tr>
@@ -801,43 +837,85 @@ simple_average.SimpleAverageTrainable
 task_3: train
 </th>
 <td>
-[0.0, 0.8]
+[0.0, 0.4]
 </td>
 <td>
-[0.6, 0.8]
 </td>
 <td>
-shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.9}
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.7}
 </td>
 <td>
-simple_average.SimpleAverageTrainable
+SimpleAveT [decay 0.7]
 </td>
 <td>
-14
+27 (end)
 </td>
 <td>
-0.00080
 </td>
 </tr>
 <tr>
 <th>
-task_4: eval
+task_4: train
+</th>
+<td>
+[0.0, 0.3]
+</td>
+<td>
+[0.3, 0.4]
+</td>
+<td>
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.5}
+</td>
+<td>
+SimpleAveT
+</td>
+<td>
+39 (best)<br/>39 (end)
+</td>
+<td>
+0.00089
+</td>
+</tr>
+<tr>
+<th>
+task_5: train
+</th>
+<td>
+[0.0, 0.4]
+</td>
+<td>
+</td>
+<td>
+shiroinu.criteria.MSELoss<br/>{'decay_rate': 0.5}
+</td>
+<td>
+SimpleAveT [decay 0.5]
+</td>
+<td>
+39 (end)
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+task_6: eval
 </th>
 <td>
 </td>
 <td>
-[0.8, 1.0]
+[0.4, 0.5]
 </td>
 <td>
 shiroinu.criteria.MAELoss {}
 </td>
 <td>
-SA<br/>SAT [00-08]<br/>SAT [00-08*]
+SimpleAve<br/>SimpleAveT [no decay]<br/>SimpleAveT [decay 0.7]<br/>SimpleAveT [decay 0.5]
 </td>
 <td>
 </td>
 <td>
-0.01434<br/>0.01421<br/>0.01421
+0.01583<br/>0.01575<br/>0.01574<br/>0.01574
 </td>
 </tr>
 </tbody>

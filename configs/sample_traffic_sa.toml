@@ -10,16 +10,16 @@ pred_len = [24, 7]
 
 # -------------------- models --------------------
 
-[[models]]
+[[models]]  # 0
 path = "shiroinu.models.simple_average.SimpleAverage"
 [models.params]
 seq_len = [24, 7, 4]
 pred_len = [24, 7]
 period_len = [24, 7]
 [models.report]
-name = "SA"
+name = "SimpleAve"
 
-[[models]]
+[[models]]  # 1
 path = "shiroinu.models.simple_average.SimpleAverage"
 [models.params]
 seq_len = [24, 7, 4]
@@ -27,9 +27,9 @@ pred_len = [24, 7]
 period_len = [24, 7]
 decay_rate = 0.9
 [models.report]
-name = "SA09"
+name = "SimpleAve09"
 
-[[models]]
+[[models]]  # 2
 path = "shiroinu.models.simple_average.SimpleAverage"
 [models.params]
 seq_len = [24, 7, 4]
@@ -37,9 +37,9 @@ pred_len = [24, 7]
 period_len = [24, 7]
 decay_rate = 0.8
 [models.report]
-name = "SA08"
+name = "SimpleAve08"
 
-[[models]]
+[[models]]  # 3
 path = "shiroinu.models.simple_average.SimpleAverage"
 [models.params]
 seq_len = [24, 7, 4]
@@ -47,9 +47,9 @@ pred_len = [24, 7]
 period_len = [24, 7]
 decay_rate = 0.7
 [models.report]
-name = "SA07"
+name = "SimpleAve07"
 
-[[models]]
+[[models]]  # 4
 path = "shiroinu.models.simple_average.SimpleAverage"
 [models.params]
 seq_len = [24, 7, 4]
@@ -57,21 +57,60 @@ pred_len = [24, 7]
 period_len = [24, 7]
 decay_rate = 0.6
 [models.report]
-name = "SA06"
+name = "SimpleAve06"
 
-[[models]]
-path = "shiroinu.models.simple_average.SimpleAverage"
+[[models]]  # 5
+path = "shiroinu.models.simple_average.SimpleAverageTrainable"
 [models.params]
 seq_len = [24, 7, 4]
 pred_len = [24, 7]
 period_len = [24, 7]
-decay_rate = 0.5
+n_channel = 862
 [models.report]
-name = "SA05"
+name = "SimpleAveT"
+
+# -------------------- task templates --------------------
+
+[[task_templates]]
+reset_model = true
+[task_templates.batch_sampler]
+path = "shiroinu.batch_sampler.BatchSamplerShuffle"
+params = { batch_size = 64 }
+[task_templates.optimizer]
+path = "torch.optim.Adam"
+params = { lr = 0.001 }
+[task_templates.lr_scheduler]
+path = "torch.optim.lr_scheduler.CosineAnnealingLR"
+params = { T_max = 10 }
 
 # -------------------- tasks --------------------
 
-[[tasks]]
+[[tasks]]  # 0
+task_type = "train"
+model = { id = 5, state_path = "" }
+task_template_id = 0
+n_epoch = 40
+n_epoch_ref = -1
+early_stop = true
+train_range = [0.0, 0.6]
+valid_range = [0.6, 0.8]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = {}
+
+[[tasks]]  # 1
+task_type = "train"
+model = { id = 5, state_path = "" }
+task_template_id = 0
+n_epoch = -1
+n_epoch_ref = 0
+early_stop = false
+train_range = [0.0, 0.8]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = {}
+
+[[tasks]]  # 2
 task_type = "eval"
 valid_range = [0.8, 1.0]
 models = [
@@ -80,7 +119,7 @@ models = [
 { id = 2, state_path = "" },
 { id = 3, state_path = "" },
 { id = 4, state_path = "" },
-{ id = 5, state_path = "" },
+{ id = 5, state_path = "<HERE>model_task_1_end.pth" },
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]

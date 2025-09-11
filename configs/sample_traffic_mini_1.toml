@@ -5,6 +5,7 @@ batch_size_eval = 256
 [data]
 path = "~/dataset/traffic/traffic.csv"
 colname_timestamp = "date"
+white_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 seq_len = [24, 7, 4]
 pred_len = [24, 7]
 
@@ -20,20 +21,19 @@ period_len = [24, 7]
 name = "SimpleAve"
 
 [[models]]
-path = "shiroinu.models.dlinear.DLinearIqr"
+path = "shiroinu.models.simple_average.SimpleAverageTrainable"
 [models.params]
 seq_len = [24, 7, 4]
 pred_len = [24, 7]
-kernel_size = 25
-bias = true
+period_len = [24, 7]
+n_channel = 10
+[models.report]
+name = "SimpleAveT"
 
 # -------------------- task templates --------------------
 
 [[task_templates]]
 reset_model = true
-[task_templates.criterion_target]
-path = "shiroinu.criteria.MSELoss"
-params = {}
 [task_templates.batch_sampler]
 path = "shiroinu.batch_sampler.BatchSamplerShuffle"
 params = { batch_size = 64 }
@@ -55,8 +55,11 @@ task_template_id = 0
 n_epoch = 40
 n_epoch_ref = -1
 early_stop = true
-train_range = [0.0, 0.6]
-valid_range = [0.6, 0.8]
+train_range = [0.0, 0.3]
+valid_range = [0.3, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = {}
 
 [[tasks]]  # 1
 task_type = "train"
@@ -65,72 +68,75 @@ task_template_id = 0
 n_epoch = -1
 n_epoch_ref = 0
 early_stop = false
-train_range = [0.0, 0.8]
+train_range = [0.0, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = {}
 [tasks.report]
-note = "00-08"
+note = "no decay"
 
 [[tasks]]  # 2
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
-n_epoch = -1
-n_epoch_ref = 0
-early_stop = false
-train_range = [0.2, 0.8]
-[tasks.report]
-note = "02-08"
+n_epoch = 40
+n_epoch_ref = -1
+early_stop = true
+train_range = [0.0, 0.3]
+valid_range = [0.3, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.7 }
 
 [[tasks]]  # 3
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
-n_epoch = 40
-n_epoch_ref = -1
-early_stop = true
-train_range = [0.2, 0.6]
-valid_range = [0.6, 0.8]
+n_epoch = -1
+n_epoch_ref = 2
+early_stop = false
+train_range = [0.0, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.7 }
+[tasks.report]
+note = "decay 0.7"
 
 [[tasks]]  # 4
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
-n_epoch = -1
-n_epoch_ref = 3
-early_stop = false
-train_range = [0.4, 0.8]
-[tasks.report]
-note = "04-08"
+n_epoch = 40
+n_epoch_ref = -1
+early_stop = true
+train_range = [0.0, 0.3]
+valid_range = [0.3, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.5 }
 
 [[tasks]]  # 5
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
-n_epoch = 40
-n_epoch_ref = -1
-early_stop = true
-train_range = [0.4, 0.6]
-valid_range = [0.6, 0.8]
+n_epoch = -1
+n_epoch_ref = 4
+early_stop = false
+train_range = [0.0, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.5 }
+[tasks.report]
+note = "decay 0.5"
 
 [[tasks]]  # 6
-task_type = "train"
-model = { id = 1, state_path = "" }
-task_template_id = 0
-n_epoch = -1
-n_epoch_ref = 5
-early_stop = false
-train_range = [0.6, 0.8]
-[tasks.report]
-note = "06-08"
-
-[[tasks]]  # 7
 task_type = "eval"
-valid_range = [0.8, 1.0]
+valid_range = [0.4, 0.5]
 models = [
 { id = 0, state_path = "" },
-{ id = 1, state_path = "<HERE>model_best_task_1.pth" },
-{ id = 1, state_path = "<HERE>model_best_task_2.pth" },
-{ id = 1, state_path = "<HERE>model_best_task_4.pth" },
-{ id = 1, state_path = "<HERE>model_best_task_6.pth" },
+{ id = 1, state_path = "<HERE>model_task_1_end.pth" },
+{ id = 1, state_path = "<HERE>model_task_3_end.pth" },
+{ id = 1, state_path = "<HERE>model_task_5_end.pth" },
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]

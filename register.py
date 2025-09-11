@@ -71,7 +71,7 @@ def main():
         ul = Elm('ul')
         for target in v:
             base, _, file_1, _ = _get_path(target)
-            ul.append(Elm('li', _to_a(base, file_1)))
+            ul.append(Elm('li', Elm('a', base).set_attr('href', f'#{base}')))
         rp.append(ul)
     rp.append(Elm('br'))
     rp.append(Elm('hr'))
@@ -84,7 +84,7 @@ def main():
             soup = BeautifulSoup(text, 'html.parser')
             node = soup.select_one('#summary')
             if node:
-                rp.append(Elm('h3', _to_a(base, file_1)))
+                rp.append(Elm('h3', _to_a(base, file_1)).set_attr('id', base))
                 rp.append(''.join(str(c) for c in node.contents))
 
     rp.output('docs/index.html')

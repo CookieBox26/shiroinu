@@ -18,7 +18,7 @@ seq_len = [24, 7, 4]
 pred_len = [24, 7]
 period_len = [24, 7]
 [models.report]
-name = "SA"
+name = "SimpleAve"
 
 [[models]]
 path = "shiroinu.models.dlinear.DLinearIqr"
@@ -27,25 +27,13 @@ seq_len = [24, 7, 4]
 pred_len = [24, 7]
 kernel_size = 25
 bias = true
-[models.report]
-name = "DLI"
-
-# -------------------- criteria --------------------
-
-[[criteria]]
-path = "torch.nn.MSELoss"
-params = {}
-
-[[criteria]]
-path = "torch.nn.L1Loss"
-params = {}
 
 # -------------------- task templates --------------------
 
 [[task_templates]]
 reset_model = true
 [task_templates.criterion_target]
-path = "torch.nn.MSELoss"
+path = "shiroinu.criteria.MSELoss"
 params = {}
 [task_templates.batch_sampler]
 path = "shiroinu.batch_sampler.BatchSamplerShuffle"
@@ -61,43 +49,61 @@ params = { T_max = 10 }
 
 # -------------------- tasks --------------------
 
-[[tasks]]
+[[tasks]]  # 0
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
 n_epoch = 40
 n_epoch_ref = -1
 early_stop = true
-train_range = [0.0, 0.6]
-valid_range = [0.6, 0.8]
+train_range = [0.0, 0.3]
+valid_range = [0.3, 0.4]
 
-[[tasks]]
+[[tasks]]  # 1
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
 n_epoch = -1
 n_epoch_ref = 0
 early_stop = false
-train_range = [0.0, 0.8]
-valid_range = [0.6, 0.8]
+train_range = [0.0, 0.4]
+[tasks.report]
+note = "no decay"
 
-[[tasks]]
+[[tasks]]  # 2
+task_type = "train"
+model = { id = 1, state_path = "" }
+task_template_id = 0
+n_epoch = 40
+n_epoch_ref = -1
+early_stop = true
+train_range = [0.0, 0.3]
+valid_range = [0.3, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.9 }
+
+[[tasks]]  # 3
 task_type = "train"
 model = { id = 1, state_path = "" }
 task_template_id = 0
 n_epoch = -1
-n_epoch_ref = 0
+n_epoch_ref = 2
 early_stop = false
-train_range = [0.2, 0.8]
-valid_range = [0.6, 0.8]
+train_range = [0.0, 0.4]
+[tasks.criterion_target]
+path = "shiroinu.criteria.MSELoss"
+params = { decay_rate = 0.9 }
+[tasks.report]
+note = "decay 0.9"
 
-[[tasks]]
+[[tasks]]  # 4
 task_type = "eval"
-valid_range = [0.8, 1.0]
+valid_range = [0.4, 0.5]
 models = [
 { id = 0, state_path = "" },
-{ id = 1, state_path = "<HERE>model_best_task_1.pth", note = "00-08" },
-{ id = 1, state_path = "<HERE>model_best_task_2.pth", note = "02-08" },
+{ id = 1, state_path = "<HERE>model_task_1_end.pth" },
+{ id = 1, state_path = "<HERE>model_task_3_end.pth" },
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]

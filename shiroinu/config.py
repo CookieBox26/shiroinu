@@ -1,5 +1,6 @@
 import toml
 import os
+import re
 import math
 import datetime
 from copy import deepcopy
@@ -38,21 +39,45 @@ class Config:
             for field in ['optimizer', 'lr_scheduler', 'batch_sampler']:
                 if field in d['tasks'][i_task]:
                     d['tasks'][i_task][field] = SimpleNamespace(**d['tasks'][i_task][field])
+            if 'valid_range' not in d['tasks'][i_task]:
+                d['tasks'][i_task]['valid_range'] = None
         self.tasks = [SimpleNamespace(**task) for task in d['tasks']]
 
-    def get_model(self, id, state_path='', note='', for_report=False):
+    def get_model(self, id, state_path=''):
         src = deepcopy(self.models[id])
         model_ = {k: src[k] for k in ['path', 'params']}
         if state_path != '':
             if '<HERE>' in state_path:
                 state_path = state_path.replace('<HERE>', self.log_dir)
             model_['params']['state_path'] = state_path
-        if for_report and ('report' in src):
-            for k, v in src['report'].items():
-                model_[k] = (f'{v} [{note}]' if k == 'name' and note else v)
-            if 'name' not in model_:
-                model_['name'] = f'model_{id}'
         return model_
+
+    def get_model_for_report(self, id, state_path='', note=''):
+        model_ = self.get_model(id, state_path)
+        ref_task_id = None
+        if '<HERE>' in state_path:
+            match = re.search(r'task_(\d+)_', state_path)
+            if match:
+                ref_task_id = int(match.group(1))
+        if 'report' in self.models[id]:
+            for k, v in self.models[id]['report'].items():
+                model_[k] = v
+        if 'name' not in model_:
+            model_['name'] = model_['path'].split('.')[-1]
+        if note != '':
+            model_['name'] += f' [{note}]'
+        if ref_task_id is not None:
+            ref_task = self.tasks[ref_task_id]
+            if hasattr(ref_task, 'report') and ('note' in ref_task.report):
+                note_ = ref_task.report['note']
+                model_['name'] += f' [{note_}]'
+        return model_
+
+    def get_model_for_report_from_task(self, task):
+        note = ''
+        if hasattr(task, 'report') and ('note' in task.report):
+            note = task.report['note']
+        return self.get_model_for_report(note=note, **task.model)
 
     def log_dir_path(self, filename):
         return os.path.join(self.log_dir, filename)
@@ -74,7 +99,7 @@ class Config:
         self._set_models(d)
         self._set_tasks(d)
 
-        self.criteria = [] if ('criteria' not in d) else d['criteria']
+        # self.criteria = [] if ('criteria' not in d) else d['criteria']
 
         suffix = '' if (('suffix' not in d) or not d['suffix']) \
             else '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
