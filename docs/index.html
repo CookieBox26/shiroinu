@@ -88,6 +88,11 @@ sample_traffic_mini_0
 sample_traffic_mini_1
 </a>
 </li>
+<li>
+<a href="#sample_traffic_mini_2">
+sample_traffic_mini_2
+</a>
+</li>
 </ul>
 
 <br>
@@ -916,6 +921,143 @@ SimpleAve<br/>SimpleAveT [no decay]<br/>SimpleAveT [decay 0.7]<br/>SimpleAveT [d
 </td>
 <td>
 0.01583<br/>0.01575<br/>0.01574<br/>0.01574
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="sample_traffic_mini_2">
+<a href="sample_traffic_mini_2.html" target="_blank" rel="noopener noreferrer">
+sample_traffic_mini_2
+</a>
+</h3>
+
+
+<table style="max-width: 720px;">
+<tbody>
+<tr>
+<th>
+data path
+</th>
+<td>
+~/dataset/traffic/traffic.csv
+</td>
+</tr>
+<tr>
+<th>
+white_list
+</th>
+<td>
+count: 3<br/>[0, 1, 2]
+</td>
+</tr>
+<tr>
+<th>
+seq_len
+</th>
+<td>
+672
+</td>
+</tr>
+<tr>
+<th>
+pred_len
+</th>
+<td>
+168
+</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>
+</th>
+<th>
+train_range
+</th>
+<th>
+valid_range
+</th>
+<th>
+criterion
+</th>
+<th>
+model
+</th>
+<th>
+i_epoch
+</th>
+<th>
+loss_valid
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+task_0: train
+</th>
+<td>
+[0.0, 0.3]
+</td>
+<td>
+[0.3, 0.4]
+</td>
+<td>
+shiroinu.criteria.MSELoss {}
+</td>
+<td>
+PatchTSTIqr
+</td>
+<td>
+4 (best)<br/>4 (end)
+</td>
+<td>
+1.35092
+</td>
+</tr>
+<tr>
+<th>
+task_1: train
+</th>
+<td>
+[0.0, 0.4]
+</td>
+<td>
+</td>
+<td>
+shiroinu.criteria.MSELoss {}
+</td>
+<td>
+PatchTSTIqr [no decay]
+</td>
+<td>
+4 (end)
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+task_2: eval
+</th>
+<td>
+</td>
+<td>
+[0.4, 0.5]
+</td>
+<td>
+shiroinu.criteria.MAELoss {}
+</td>
+<td>
+SimpleAve<br/>PatchTSTIqr [no decay]
+</td>
+<td>
+</td>
+<td>
+0.01779<br/>0.02979
 </td>
 </tr>
 </tbody>
