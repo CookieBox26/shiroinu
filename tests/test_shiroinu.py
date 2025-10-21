@@ -1,4 +1,5 @@
 from shiroinu.scaler import StandardScaler
+from shiroinu import load_instance
 import torch
 
 
@@ -18,3 +19,8 @@ def test_standard_scaler():
     assert torch.allclose(batch_1[0][0], expected)
     batch_1 = scaler.rescale(batch_1)
     assert torch.allclose(batch_1, batch_0)
+
+
+def test_mse_loss():
+    conf_crit = {'path': 'shiroinu.criteria.MSELoss', 'params': {}}
+    criterion = load_instance(**conf_crit)

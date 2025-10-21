@@ -17,30 +17,30 @@ class TSDataset(Dataset):
     def to_tensor(cls, x):
         return torch.tensor(x, dtype=torch.float32, device=cls.device)
 
-    def __init__(self, logger, df, seq_len, horizon, cols_org):
+    def __init__(self, logger, df, seq_len, pred_len, cols_org):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.df = df
         self.tsta = list(self.df['timestamp'].values)
         self.tste = list(self.df['timestep'].values)
         del self.df['timestamp'], self.df['timestep']
         self.seq_len = seq_len
-        self.horizon = horizon
+        self.pred_len = pred_len
         self.cols_org = cols_org
 
-        self.n_sample = len(df) - (seq_len - 1) - horizon
+        self.n_sample = len(df) - (seq_len - 1) - pred_len
         if logger is not None:
             logger.log(f'===== {self.__class__.__name__} instantiated. =====')
             logger.log(str(list(df.columns)))
             logger.log(f'{len(df)=}')
             logger.log(f'{self.n_sample=}')
-            logger.log(f'{self.tsta[0                        ]=}')
-            logger.log(f'{self.tsta[0 + seq_len - 1          ]=}')
-            logger.log(f'{self.tsta[0 + seq_len              ]=}')
-            logger.log(f'{self.tsta[0 + seq_len + horizon - 1]=}')
-            logger.log(f'{self.tsta[self.n_sample - 1                        ]=}')
-            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len - 1          ]=}')
-            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len              ]=}')
-            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len + horizon - 1]=}')
+            logger.log(f'{self.tsta[0                         ]=}')
+            logger.log(f'{self.tsta[0 + seq_len - 1           ]=}')
+            logger.log(f'{self.tsta[0 + seq_len               ]=}')
+            logger.log(f'{self.tsta[0 + seq_len + pred_len - 1]=}')
+            logger.log(f'{self.tsta[self.n_sample - 1                         ]=}')
+            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len - 1           ]=}')
+            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len               ]=}')
+            logger.log(f'{self.tsta[self.n_sample - 1 + seq_len + pred_len - 1]=}')
 
         self.n_feats = len(self.df.columns)
         self.means = []
@@ -66,13 +66,13 @@ class TSDataset(Dataset):
                 self.tsta[0],
                 self.tsta[0 + self.seq_len - 1],
                 self.tsta[0 + self.seq_len],
-                self.tsta[0 + self.seq_len + self.horizon - 1],
+                self.tsta[0 + self.seq_len + self.pred_len - 1],
             ],
             'sample_last': [
                 self.tsta[self.n_sample - 1],
                 self.tsta[self.n_sample - 1 + self.seq_len - 1],
                 self.tsta[self.n_sample - 1 + self.seq_len],
-                self.tsta[self.n_sample - 1 + self.seq_len + self.horizon - 1],
+                self.tsta[self.n_sample - 1 + self.seq_len + self.pred_len - 1],
             ],
             'means': self.means,
             'stds': self.stds,
@@ -88,10 +88,10 @@ class TSDataset(Dataset):
         # idx :  Start of the reference window
         # idx + seq_len - 1 :  End of the reference window (current time) (= idx_1 - 1)
         # idx + seq_len - 1 + 1 :  Start of the prediction window (= idx_1)
-        # idx + seq_len - 1 + horizon :  End of the prediction window
+        # idx + seq_len - 1 + pred_len :  End of the prediction window
 
         idx_1 = idx + self.seq_len
-        idx_2 = idx + self.seq_len + self.horizon
+        idx_2 = idx + self.seq_len + self.pred_len
 
         tsta = self.tsta[idx:idx_1]
         tste = self.tste[idx:idx_1]
