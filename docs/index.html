@@ -79,6 +79,11 @@ For Debugging
 
 <ul>
 <li>
+<a href="#sample_traffic_tiny_0">
+sample_traffic_tiny_0
+</a>
+</li>
+<li>
 <a href="#sample_traffic_mini_0">
 sample_traffic_mini_0
 </a>
@@ -519,6 +524,143 @@ SimpleAve<br/>SimpleAve09<br/>SimpleAve08<br/>SimpleAve07<br/>SimpleAve06<br/>Si
 <h2>
 For Debugging
 </h2>
+
+<h3 id="sample_traffic_tiny_0">
+<a href="sample_traffic_tiny_0.html" target="_blank" rel="noopener noreferrer">
+sample_traffic_tiny_0
+</a>
+</h3>
+
+
+<table style="max-width: 720px;">
+<tbody>
+<tr>
+<th>
+data path
+</th>
+<td>
+~/dataset/traffic/traffic.csv
+</td>
+</tr>
+<tr>
+<th>
+white_list
+</th>
+<td>
+count: 3<br/>[0, 1, 2]
+</td>
+</tr>
+<tr>
+<th>
+seq_len
+</th>
+<td>
+672
+</td>
+</tr>
+<tr>
+<th>
+pred_len
+</th>
+<td>
+168
+</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>
+</th>
+<th>
+train_range
+</th>
+<th>
+valid_range
+</th>
+<th>
+criterion
+</th>
+<th>
+model
+</th>
+<th>
+i_epoch
+</th>
+<th>
+loss_valid
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+task_0: train
+</th>
+<td>
+[0.0, 0.1]
+</td>
+<td>
+[0.1, 0.2]
+</td>
+<td>
+shiroinu.criteria.MSELoss {}
+</td>
+<td>
+DLinearIqr
+</td>
+<td>
+1 (best)<br/>1 (end)
+</td>
+<td>
+0.51296
+</td>
+</tr>
+<tr>
+<th>
+task_1: train
+</th>
+<td>
+[0.0, 0.2]
+</td>
+<td>
+</td>
+<td>
+shiroinu.criteria.MSELoss {}
+</td>
+<td>
+DLinearIqr [no decay]
+</td>
+<td>
+1 (end)
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+task_2: eval
+</th>
+<td>
+</td>
+<td>
+[0.2, 0.3]
+</td>
+<td>
+shiroinu.criteria.MAELoss {}
+</td>
+<td>
+SimpleAve<br/>DLinearIqr [no decay]
+</td>
+<td>
+</td>
+<td>
+0.01464<br/>0.02020
+</td>
+</tr>
+</tbody>
+</table>
 
 <h3 id="sample_traffic_mini_0">
 <a href="sample_traffic_mini_0.html" target="_blank" rel="noopener noreferrer">

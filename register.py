@@ -5,9 +5,11 @@ import shirotsubaki.report
 from shirotsubaki.element import Element as Elm
 from bs4 import BeautifulSoup
 from pathlib import Path
+import argparse
 
 
 def _copy(target, file_0, file_1):
+    # TODO: SVG ファイルがセパレートされていたときの埋め込み化に対応していません
     with (
         open(file_0, mode='r', encoding='utf-8') as ifile, 
         open(file_1, mode='w', encoding='utf-8', newline='\n') as ofile,
@@ -24,68 +26,86 @@ def _copy(target, file_0, file_1):
             ofile.write(line_)
 
 
-def _get_path(target):
-    return (
-        os.path.basename(target),
-        os.path.join(target, 'report.html'),
-        os.path.basename(target) + '.html',
-        os.path.join('docs/', os.path.basename(target) + '.html')
-    )
+def _get_paths(dir):
+    return {
+        'dirname': os.path.basename(dir),
+        'report_path_org': os.path.join(dir, 'report.html'),
+        'report_path_target': os.path.join('docs/', os.path.basename(dir) + '.html'),
+        'report_rel_path_target': os.path.basename(dir) + '.html',
+    }
 
 
-def _to_a(base, file_1):
-    a = Elm('a', base).set_attr('href', file_1)
+def _to_a(s, rel_path):
+    a = Elm('a', s).set_attr('href', rel_path)
     return a.set_attr('target', '_blank').set_attr('rel', 'noopener noreferrer')
 
 
 def main():
     targets = {
         'Traffic': [
-            'outputs/sample_traffic_sa',
-            'outputs/sample_traffic_dlinear_0',
+            {'dir': 'outputs/sample_traffic_sa'},
+            {'dir': 'outputs/sample_traffic_dlinear_0'},
         ],
         'Weather': [
-            'outputs/sample_weather_sa',
+            {'dir': 'outputs/sample_weather_sa'},
         ],
         'For Debugging': [
-            'outputs/sample_traffic_mini_0',
-            'outputs/sample_traffic_mini_1',
-            'outputs/sample_traffic_mini_2',
+            {'dir': 'outputs/sample_traffic_tiny_0'},
+            {'dir': 'outputs/sample_traffic_mini_0'},
+            {'dir': 'outputs/sample_traffic_mini_1'},
+            {'dir': 'outputs/sample_traffic_mini_2'},
         ],
     }
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target_path', type=str, nargs='?', default='sample_traffic_mini_0')
+    args = parser.parse_args()
 
-    for k, v in targets.items():
-        for target in v:
-            _, file_0, file_1, path_1 = _get_path(target)
-            if os.path.isfile(file_0):
-                _copy(target, file_0, path_1)
-            elif not os.path.isfile(path_1):
-                assert False, 'No such file: ' + file_0
+    flag = False
+    for category, reports in targets.items():
+        for report in reports:
+            if report['dir'] == f'outputs/{args.target_path}':
+                print('Target: ' + report['dir'])
+                report['collect'] = True
+                flag = True
+                break
+    if not flag:
+        assert False, 'Invalid target: ' + args.target_path
+
+    for category, reports in targets.items():
+        for report in reports:
+            report.update(_get_paths(report['dir']))
+            if ('collect' not in report) or (not report['collect']):
+                continue
+            if os.path.isfile(report['report_path_org']):
+                _copy(report['dir'], report['report_path_org'], report['report_path_target'])
+            else:
+                assert False, 'No such file: ' + report['report_path_org']
 
     rp = shirotsubaki.report.Report()
     rp.style.set('ul', 'margin', '0')
     rp.style.set('ul', 'padding-left', '2em')
     rp.style.set('th, td', 'vertical-align', 'top')
 
-    for k, v in targets.items():
-        rp.append(Elm('h2', k))
+    for category, reports in targets.items():
+        rp.append(Elm('h2', category))
         ul = Elm('ul')
-        for target in v:
-            base, _, file_1, _ = _get_path(target)
-            ul.append(Elm('li', Elm('a', base).set_attr('href', f'#{base}')))
+        for report in reports:
+            dirname = report['dirname']
+            ul.append(Elm('li', Elm('a', dirname).set_attr('href', f'#{dirname}')))
         rp.append(ul)
     rp.append(Elm('br'))
     rp.append(Elm('hr'))
 
-    for k, v in targets.items():
-        rp.append(Elm('h2', k))
-        for target in v:
-            base, _, file_1, path_1 = _get_path(target)
-            text = Path(path_1).read_text(encoding='utf-8')
+    for category, reports in targets.items():
+        rp.append(Elm('h2', category))
+        for report in reports:
+            text = Path(report['report_path_target']).read_text(encoding='utf-8')
             soup = BeautifulSoup(text, 'html.parser')
             node = soup.select_one('#summary')
             if node:
-                rp.append(Elm('h3', _to_a(base, file_1)).set_attr('id', base))
+                elm = Elm('h3', _to_a(report['dirname'], report['report_rel_path_target']))
+                elm.set_attr('id', report['dirname'])
+                rp.append(elm)
                 rp.append(''.join(str(c) for c in node.contents))
 
     rp.output('docs/index.html')

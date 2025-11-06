@@ -29,6 +29,8 @@ def run_task_valid(data_loader, criterion, model):
 
 
 def run_task(conf, logger, dm, model, task, batch_size_eval):
+    """Training-type task
+    """
     data_loader_train = dm.get_data_loader(
         logger=logger,
         data_range=task.train_range,
@@ -100,6 +102,8 @@ def run_task(conf, logger, dm, model, task, batch_size_eval):
 
 
 def run_task_eval(conf, logger, dm, task, batch_size_eval):
+    """Evaluation-type task
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data_loader = dm.get_data_loader(
         logger=logger,

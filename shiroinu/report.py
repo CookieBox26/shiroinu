@@ -202,7 +202,7 @@ class TaskInfoExtractor:
                         diff=diff, show_xticklabels=(i_ax == n_channel_ - 1),
                     )
                 plt.subplots_adjust(hspace=0.1)
-            contents[f'y{i_channel_0}-'] = _figure_to_html(fig, f'img/{prefix}_{i_channel_0}.svg')
+            contents[f'y{i_channel_0}-'] = _figure_to_html(fig, f'img/{prefix}_{i_channel_0}')
             if (i_graph + 1) >= max_n_graph:
                 break
         return contents
@@ -226,7 +226,7 @@ class ReportWriter:
     def _figure_to_html(self, fig, img_rel_path):
         return figure_to_html(
             fig, fmt=self.image_format, embed=self.embed_image,
-            html_dir=self.conf.log_dir, img_rel_path=img_rel_path,
+            html_dir=self.conf.log_dir, img_rel_path=img_rel_path + f'.{self.image_format}',
             dpi=self.dpi, callback=plt.close,
         )
 
@@ -251,10 +251,10 @@ class ReportWriter:
                 ['loss_per_sample_train', 'loss_per_sample_valid'],
                 tie.task.criterion_target['path'],
             )
-            self.append_figure(fig, f'img/{tie.id}_loss_train_valid.svg')
+            self.append_figure(fig, f'img/{tie.id}_loss_train_valid')
         else:
             fig = tie.plot_loss_graph(['loss_per_sample_train'], tie.task.criterion_target['path'])
-            self.append_figure(fig, f'img/{tie.id}_loss_train.svg')
+            self.append_figure(fig, f'img/{tie.id}_loss_train')
 
     def _report_task_eval(self, tie):
         self.append(tie.get_task_eval_conf())
