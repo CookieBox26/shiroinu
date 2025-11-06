@@ -1,5 +1,7 @@
 from shiroinu.config import Config
 from shiroinu.logger import Logger
+from shiroinu.criteria import BaseLoss
+from shiroinu.models.base_model import BaseModel
 from importlib import import_module
 import random
 import numpy as np
@@ -34,23 +36,24 @@ def load_class(path):
     return model_class
 
 
-def load_instance(path, params):
-    model_class = load_class(path)
-    return model_class(**params)
+def create_instance(path, params, dataset_train=None, dataset_valid=None):
+    class_ = load_class(path)
 
+    dataset = None
+    if issubclass(class_, BaseModel):
+        dataset = dataset_train
+    if issubclass(class_, BaseLoss):
+        dataset = dataset_valid
 
-def create_instance(path, params, dataset):
-    model_class = load_class(path)
-
-    if 'means_' in model_class.data_based_hyperparams:
+    if 'means_' in class_.data_based_hyperparams:
         params['means_'] = dataset.means
-    if 'stds_' in model_class.data_based_hyperparams:
+    if 'stds_' in class_.data_based_hyperparams:
         params['stds_'] = dataset.stds
-    if 'q1s_' in model_class.data_based_hyperparams:
+    if 'q1s_' in class_.data_based_hyperparams:
         params['q1s_'] = dataset.q1s
-    if 'q2s_' in model_class.data_based_hyperparams:
+    if 'q2s_' in class_.data_based_hyperparams:
         params['q2s_'] = dataset.q2s
-    if 'q3s_' in model_class.data_based_hyperparams:
+    if 'q3s_' in class_.data_based_hyperparams:
         params['q3s_'] = dataset.q3s
 
-    return model_class.create(**params)
+    return class_.create(**params)

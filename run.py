@@ -1,6 +1,6 @@
 from shiroinu.data_manager import TSDataManager
 from shiroinu.batch_sampler import BatchSampler
-from shiroinu import get_conf_and_logger, fix_seed, load_class, load_instance, create_instance
+from shiroinu import get_conf_and_logger, fix_seed, load_class, create_instance
 from shiroinu.report import ReportWriter
 import torch
 import argparse
@@ -52,13 +52,13 @@ def run_task(conf, logger, dm, model, task, batch_size_eval):
     if (model is None) or task.reset_model:
         fix_seed()
         model_settings = conf.get_model(**task.model)
-        model = create_instance(dataset=data_loader_train.dataset, **model_settings)
+        model = create_instance(dataset_train=data_loader_train.dataset, **model_settings)
         print(
             f'{model.__class__.__name__}({model.count_trainable_parameters()}) '
             f'loaded to {model.device}'
         )
 
-    criterion_target = load_instance(**task.criterion_target)
+    criterion_target = create_instance(**task.criterion_target)
     cls_optimizer = load_class(task.optimizer.path)
     optimizer = cls_optimizer(model.parameters(), **task.optimizer.params)
     lr_scheduler = None
@@ -116,8 +116,8 @@ def run_task_eval(conf, logger, dm, task, batch_size_eval):
     models = []
     for model_ in task.models:
         model_settings = conf.get_model(**model_)
-        models.append(create_instance(dataset=data_loader.dataset, **model_settings))
-    criterion = load_instance(**task.criterion_eval)
+        models.append(create_instance(dataset_valid=data_loader.dataset, **model_settings))
+    criterion = create_instance(dataset_valid=data_loader.dataset, **task.criterion_eval)
 
     n_model = len(models)
     pred_len = models[0].pred_len

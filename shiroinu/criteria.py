@@ -1,12 +1,21 @@
+from shiroinu.scaler import StandardScaler, IqrScaler
 import torch
 from typing import Callable
 from abc import ABC
 
 
 class BaseLoss(torch.nn.Module, ABC):
+    data_based_hyperparams = []
     def __init__(self):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    def set_scaler(self, scaler):
+        if scaler is not None:
+            self.scaler = scaler
+            self.scaler.to(self.device)
+    @classmethod
+    def create(cls, **kwargs):
+        return cls(**kwargs)
 
 
 class MSELoss(BaseLoss):
@@ -23,22 +32,11 @@ class MSELoss(BaseLoss):
             w = torch.pow(torch.tensor(r, dtype=torch.float, device=self.device), idx)  # [1, r, r^2, ...]
         self.w_seq = w / w.sum()
 
-    def set_scaler(self, scaler):
-        self.scaler = scaler
-        if self.scaler is not None:
-            self.scaler.to(self.device)
-
-    def __init__(
-        self,
-        n_channel=0,
-        decay_rate: float | None = None,
-        scaler: Callable[[torch.Tensor], torch.Tensor] | None = None,
-    ):
+    def __init__(self, n_channel: int = 0, decay_rate: float | None = None):
         super().__init__()
         self.w_channel = None
         self.w_seq = None
         self.decay_rate = decay_rate
-        self.set_scaler(scaler)
         if n_channel > 0:
             self.set_w_channel(n_channel)
 
@@ -50,9 +48,6 @@ class MSELoss(BaseLoss):
             self.set_w_channel(pred.size()[2])
         if self.w_seq is None:
             self.set_w_seq(pred.size()[1])
-        if self.scaler is not None:
-            pred = self.scaler.scale(pred)
-            true = self.scaler.scale(true)
         loss = self.calc_loss(pred, true)  # batch_size, pred_len, n_channel
         me_of_each_sample_channel = torch.einsum('j,ijk->ik', (self.w_seq, loss))
         me_of_each_sample = torch.einsum('k,ik->i', (self.w_channel, me_of_each_sample_channel))
@@ -64,8 +59,38 @@ class MSELoss(BaseLoss):
 
 
 class MAELoss(MSELoss):
-    def __init__(self, n_channel=0):
-        super().__init__(n_channel)
+    def calc_loss(self, pred, true):
+        return torch.abs(pred - true)
+
+
+class NMSELoss(MSELoss):
+    data_based_hyperparams = ['means_', 'stds_']
+    def __init__(self, n_channel=0, decay_rate=None, means_=None, stds_=None):
+        super().__init__(n_channel, decay_rate)
+        self.set_scaler(StandardScaler(means_, stds_))
+    def forward(self, pred, true):
+        pred = self.scaler.scale(pred)
+        true = self.scaler.scale(true)
+        return super().forward(pred, true)
+
+
+class NMAELoss(NMSELoss):
+    def calc_loss(self, pred, true):
+        return torch.abs(pred - true)
+
+
+class IQRMSELoss(MSELoss):
+    data_based_hyperparams = ['q1s_', 'q2s_', 'q3s_']
+    def __init__(self, n_channel=0, decay_rate=None, q1s_=None, q2s_=None, q3s_=None):
+        super().__init__(n_channel, decay_rate)
+        self.set_scaler(IqrScaler(q1s_, q2s_, q3s_))
+    def forward(self, pred, true):
+        pred = self.scaler.scale(pred)
+        true = self.scaler.scale(true)
+        return super().forward(pred, true)
+
+
+class IQRMAELoss(IQRMSELoss):
     def calc_loss(self, pred, true):
         return torch.abs(pred - true)
 

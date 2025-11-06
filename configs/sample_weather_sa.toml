@@ -107,5 +107,5 @@ models = [
 ]
 percentile_points = [0.05, 0.25, 0.5, 0.75, 0.95]
 [tasks.criterion_eval]
-path = "shiroinu.criteria.MAELoss"
+path = "shiroinu.criteria.NMAELoss"
 params = {}
