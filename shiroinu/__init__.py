@@ -41,7 +41,14 @@ def create_instance(path, params, dataset_train=None, dataset_valid=None):
 
     dataset = None
     if issubclass(class_, BaseModel):
-        dataset = dataset_train
+        dataset = dataset_train if (dataset_train is not None) else type(
+            'TSDatasetDummy',
+            (object,),
+            {
+              hyperparam[:-1]: [0.0] * len(getattr(dataset_valid, hyperparam[:-1]))
+              for hyperparam in class_.data_based_hyperparams
+            },
+        )
     if issubclass(class_, BaseLoss):
         dataset = dataset_valid
 
